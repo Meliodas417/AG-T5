@@ -2,4 +2,4 @@
 
 
 ## Project Overview
-For more details on system specifications, refer to the [SRS.pdf](./SRS.pdf).
+For more details on system specifications, refer to the [T5 KPI SRS.pdf](./T5 KPI SRS.pdf).
