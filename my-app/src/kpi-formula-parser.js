@@ -32,7 +32,7 @@ function KPIUploader() {
 
     if (values.length === 0) {
       // If no numeric values are present, return N/A for all KPIs
-      return { min: 'NaN', max: 'NaN', avg: 'NaN', sum: 'NaN' };
+      return { min: 'N/A', max: 'N/A', avg: 'N/A', sum: 'N/A' };
     }
 
     const sum = values.reduce((acc, val) => acc + val, 0);
@@ -117,7 +117,7 @@ function KPIUploader() {
                   style={{ marginLeft: '10px' }}
                 >
                   <option value="" disabled>
-                    Select KPI
+                    Select Value
                   </option>
                   <option value="min">Min</option>
                   <option value="max">Max</option>
@@ -150,7 +150,7 @@ function KPIUploader() {
           cols="50"
           value={calculationExpression}
           placeholder="e.g. column1.sum + column2.avg"
-          onChange={(e) => setCalculationExpression(e.target.value)} // Allow user to modify
+          onChange={(e) => setCalculationExpression(e.target.value)} // Allow user to modify it
         />
         <br />
         <button onClick={handleCalculation}>Calculate</button>
