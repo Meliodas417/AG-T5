@@ -1,10 +1,6 @@
 import React, { useState } from 'react';
 import Papa from 'papaparse';
-<<<<<<< HEAD
-import 'bootstrap/dist/css/bootstrap.min.css'; // Import Bootstrap
-=======
 import './KPIUploader.css';
->>>>>>> 39fa76b (Uploaded KPIUploader.css and updated App.js, index.js and kpi-formula-parser.js)
 
 function KPIUploader({ onFileUpload }) {
     const [csvData, setCsvData] = useState(null);
@@ -107,85 +103,6 @@ function KPIUploader({ onFileUpload }) {
         );
     }
 
-<<<<<<< HEAD
-  return (
-    <div className="container">
-      <h2 className="my-4">CSV KPI Uploader</h2>
-      
-      <div className="mb-3">
-        <label htmlFor="formFile" className="form-label">Upload CSV File</label>
-        <input className="form-control" type="file" accept=".csv" onChange={handleFileUpload} />
-      </div>
-
-      {columnNames.length > 0 && (
-        <div>
-          <h3 className="my-3">Select Columns for KPI Calculation:</h3>
-          <div className="column-selection">
-            {columnNames.map((column) => (
-              <div key={column} style={{ marginBottom: '10px', display: 'flex', alignItems: 'center' }}>
-                <input
-                  type="checkbox"
-                  id={column}
-                  name={column}
-                  value={column}
-                  onChange={() => handleColumnSelection(column)}
-                  style={{ marginRight: '10px' }}
-                />
-                <label htmlFor={column} style={{ marginRight: '20px', minWidth: '100px' }}>
-                  {column}
-                </label>
-                <select
-                  onChange={(e) => handleKPISelect(column, e.target.value)}
-                  defaultValue=""
-                  style={{ width: '115px' }} 
-                >
-                  <option value="" disabled>
-                    Select Value
-                  </option>
-                  <option value="min">Min</option>
-                  <option value="max">Max</option>
-                  <option value="avg">Avg</option>
-                  <option value="sum">Sum</option>
-                </select>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-
-      <div>
-        <h3 className="my-3">Perform Calculation:</h3>
-        {selectedColumns.length > 0 && (
-          <div>
-            <p>Use the following variables for calculations:</p>
-            <ul className="list-group">
-              {selectedColumns.map((column) => (
-                <li key={column} className="list-group-item">
-                  {column}: min={kpiValues[column]?.min}, max={kpiValues[column]?.max}, avg={kpiValues[column]?.avg}, sum={kpiValues[column]?.sum}
-                </li>
-              ))}
-            </ul>
-          </div>
-        )}
-        <textarea
-          className="form-control my-3"
-          rows="4"
-          value={calculationExpression}
-          placeholder="e.g. column1.sum + column2.avg"
-          onChange={(e) => setCalculationExpression(e.target.value)} // Allow user to modify it
-        />
-        <button className="btn btn-primary" onClick={handleCalculation}>Calculate</button>
-
-        {calculationResult !== null && (
-          <div className="mt-3">
-            <h4>Calculation Result:</h4>
-            <p className="alert alert-info">{calculationResult}</p>
-          </div>
-        )}
-      </div>
-    </div>
-  );
-=======
     return ( 
         <div>
             <div className="file-info">
@@ -257,7 +174,7 @@ function KPIUploader({ onFileUpload }) {
             </div>
         </div>
     ); 
->>>>>>> 39fa76b (Uploaded KPIUploader.css and updated App.js, index.js and kpi-formula-parser.js)
+
 }
 
 export default KPIUploader;
