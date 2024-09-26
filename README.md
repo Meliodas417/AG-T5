@@ -3,10 +3,10 @@
 ## Project Overview
 For more details on system specifications, refer to the [T5 KPI SRS.pdf](./T5%20KPI%20SRS.pdf).
 ## Team Members
+- Wei-Ho Uang
 - Chengbin Pan
 - Ruolan Liu
 - Nicolas Huang
-- Wei-Ho Uang
 - Jun Ren
 
 ## Features
