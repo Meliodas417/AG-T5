@@ -5,5 +5,5 @@ import App2 from './kpi-formula-parser';
 
 const root = ReactDOM.createRoot(document.getElementById('root'));
 root.render(
-    <App2 />
+    <App />
 );
