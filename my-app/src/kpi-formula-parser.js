@@ -14,7 +14,7 @@ function KPIUploader({ onFileUpload }) {
     const handleFileUpload = (e) => {
         const file = e.target.files[0];
         if (file) {
-            setFileName(file.name);  // 保存文件名
+            setFileName(file.name);  // Save file name
             setCsvData(null);  // Reset previous data
             setColumnNames([]);
             setSelectedColumns([]);
@@ -25,7 +25,7 @@ function KPIUploader({ onFileUpload }) {
             Papa.parse(file, {
                 header: true,
                 complete: (result) => {
-                    const columns = Object.keys(result.data[0]); // Extract column names from first row
+                    const columns = Object.keys(result.data[0]); // Extract column names from the first row
                     setCsvData(result.data); // Set the parsed data
                     setColumnNames(columns); // Set column names
                     onFileUpload(file.name, result.data); // Trigger the callback for file upload
@@ -33,7 +33,6 @@ function KPIUploader({ onFileUpload }) {
             });
         }
     };
-  
 
     const prepareDoughnutChartData = (column) => {
         if (!csvData) return {};
@@ -127,73 +126,76 @@ function KPIUploader({ onFileUpload }) {
     return ( 
         <div>
             <div className="file-upload">
-                <input type="file" accept=".csv" onChange={handleFileUpload}/>
+                <input type="file" accept=".csv" onChange={handleFileUpload} />
             </div>
 
-
-            <div className="column-selection">
-                <h3>Select Columns for KPI Calculation:</h3>
-                {columnNames.map((column) => (
-                    <div key={column} className="column-item">
-                        <input
-                            type="checkbox"
-                            id={column}
-                            name={column}
-                            value={column}
-                            onChange={() => handleColumnSelection(column)}
-                        />
-                        <label htmlFor={column}>{column}</label>
-                        <select
-                            onChange={(e) => handleKPISelect(column, e.target.value)}
-                            defaultValue=""
-                        >
-                            <option value="" disabled>
-                                Select Value
-                            </option>
-                            <option value="min">Min</option>
-                            <option value="max">Max</option>
-                            <option value="avg">Avg</option>
-                            <option value="sum">Sum</option>
-                        </select>
+            {/* Only display the following sections if a file is uploaded */}
+            {csvData && (
+                <>
+                    <div className="column-selection">
+                        <h3>Select Columns for KPI Calculation:</h3>
+                        {columnNames.map((column) => (
+                            <div key={column} className="column-item">
+                                <input
+                                    type="checkbox"
+                                    id={column}
+                                    name={column}
+                                    value={column}
+                                    onChange={() => handleColumnSelection(column)}
+                                />
+                                <label htmlFor={column}>{column}</label>
+                                <select
+                                    onChange={(e) => handleKPISelect(column, e.target.value)}
+                                    defaultValue=""
+                                >
+                                    <option value="" disabled>
+                                        Select Value
+                                    </option>
+                                    <option value="min">Min</option>
+                                    <option value="max">Max</option>
+                                    <option value="avg">Avg</option>
+                                    <option value="sum">Sum</option>
+                                </select>
+                            </div>
+                        ))}
                     </div>
-                ))}
-            </div>
 
-            <div>
-                <h3>Perform Calculation:</h3>
-                {selectedColumns.length > 0 && (
                     <div>
-                        <p>Use the following variables for calculations:</p>
-                        <ul>
-                            {selectedColumns.map((column) => (
-                                <li key={column}>
-                                    {column}: min={kpiValues[column]?.min}, max={kpiValues[column]?.max}, avg={kpiValues[column]?.avg}, sum={kpiValues[column]?.sum}
-                                </li>
-                            ))}
-                        </ul>
-                    </div>
-                )}
-                <textarea
-                    rows="4"
-                    cols="50"
-                    style={{ width: '300px' }}
-                    value={calculationExpression}
-                    placeholder="e.g. column1.sum + column2.avg"
-                    onChange={(e) => setCalculationExpression(e.target.value)} // Allow user to modify it
-                />
-                <br />
-                <button onClick={handleCalculation}>Calculate</button>
+                        <h3>Perform Calculation:</h3>
+                        {selectedColumns.length > 0 && (
+                            <div>
+                                <p>Use the following variables for calculations:</p>
+                                <ul>
+                                    {selectedColumns.map((column) => (
+                                        <li key={column}>
+                                            {column}: min={kpiValues[column]?.min}, max={kpiValues[column]?.max}, avg={kpiValues[column]?.avg}, sum={kpiValues[column]?.sum}
+                                        </li>
+                                    ))}
+                                </ul>
+                            </div>
+                        )}
+                        <textarea
+                            rows="4"
+                            cols="50"
+                            style={{ width: '300px' }}
+                            value={calculationExpression}
+                            placeholder="e.g. column1.sum + column2.avg"
+                            onChange={(e) => setCalculationExpression(e.target.value)} // Allow user to modify it
+                        />
+                        <br />
+                        <button onClick={handleCalculation}>Calculate</button>
 
-                {calculationResult !== null && (
-                    <div className="result">
-                        <h4>Calculation Result:</h4>
-                        <p>{calculationResult}</p>
+                        {calculationResult !== null && (
+                            <div className="result">
+                                <h4>Calculation Result:</h4>
+                                <p>{calculationResult}</p>
+                            </div>
+                        )}
                     </div>
-                )}
-            </div>
+                </>
+            )}
         </div>
     ); 
-
 }
 
 export default KPIUploader;
