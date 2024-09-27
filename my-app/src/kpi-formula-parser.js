@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
 import Papa from 'papaparse';
-import 'bootstrap/dist/css/bootstrap.min.css'; // Import Bootstrap
 
 function KPIUploader() {
   const [csvData, setCsvData] = useState(null);
@@ -9,30 +8,66 @@ function KPIUploader() {
   const [kpiValues, setKpiValues] = useState({});
   const [calculationExpression, setCalculationExpression] = useState('');
   const [calculationResult, setCalculationResult] = useState(null);
+  const [useDefaultCSV, setUseDefaultCSV] = useState(false);
 
-  // Function to handle file upload
+
   const handleFileUpload = (e) => {
     const file = e.target.files[0];
     if (file) {
-      Papa.parse(file, {
-        header: true,
-        complete: (result) => {
-          const columns = Object.keys(result.data[0]); // Extract column names from first row
-          setCsvData(result.data); // Set the parsed data
-          setColumnNames(columns); // Set column names
-        },
-      });
+      parseCSVFile(file);
     }
   };
 
-  // Function to calculate KPI values for a given column
+  // 解析 CSV 文件
+  const parseCSVFile = (file) => {
+    Papa.parse(file, {
+      header: true,
+      skipEmptyLines: true,  // 跳过空行
+      dynamicTyping: true,   // 自动检测数据类型
+      complete: (result) => {
+        const columns = Object.keys(result.data[0]).filter(col => col); // 过滤掉空列
+        setCsvData(result.data); // 设置解析后的数据
+        setColumnNames(columns); // 设置列名
+      },
+    });
+  };
+
+
+  const handleUseDefaultCSV = () => {
+    setUseDefaultCSV(!useDefaultCSV);
+    if (!useDefaultCSV) {
+      fetchDefaultCSV();
+    } else {
+      setCsvData(null);
+      setColumnNames([]);
+    }
+  };
+
+
+  const fetchDefaultCSV = () => {
+    const defaultCSV = `
+KPI Name,Value,Target,Date
+Revenue,50000,60000,2024-01-01
+Customer Satisfaction,85,90,2024-01-01
+Employee Retention,95,100,2024-01-01
+Operating Costs,30000,25000,2024-01-01
+Revenue,60000,60000,2024-02-01
+Customer Satisfaction,87,90,2024-02-01
+Employee Retention,96,100,2024-02-01
+Operating Costs,28000,25000,2024-02-01
+    `;
+
+    const blob = new Blob([defaultCSV], { type: 'text/csv' });
+    const file = new File([blob], 'default.csv', { type: 'text/csv' });
+    parseCSVFile(file);
+  };
+
   const calculateKPI = (column) => {
     const values = csvData
       .map((row) => parseFloat(row[column]))
-      .filter((val) => !isNaN(val)); // Filter out non-numeric values
+      .filter((val) => !isNaN(val)); // 过滤非数字值
 
     if (values.length === 0) {
-      // If no numeric values are present, return N/A for all KPIs
       return { min: 'N/A', max: 'N/A', avg: 'N/A', sum: 'N/A' };
     }
 
@@ -44,11 +79,11 @@ function KPIUploader() {
     return { min, max, avg, sum };
   };
 
-  // Function to handle column selection and calculate KPIs
+
   const handleColumnSelection = (column) => {
     if (selectedColumns.includes(column)) {
       setSelectedColumns(selectedColumns.filter((col) => col !== column));
-      const { [column]: _, ...rest } = kpiValues; // Remove column KPI from state
+      const { [column]: _, ...rest } = kpiValues;
       setKpiValues(rest);
     } else {
       const kpiForColumn = calculateKPI(column);
@@ -60,22 +95,25 @@ function KPIUploader() {
     }
   };
 
-  // Function to handle dropdown selection
+
   const handleKPISelect = (column, kpi) => {
     const expressionPart = `${column}.${kpi}`;
     setCalculationExpression((prev) => prev + (prev.length ? ' ' : '') + expressionPart);
   };
 
-  // Function to evaluate user input calculation
+
   const handleCalculation = () => {
     try {
-      // Replace KPI placeholders with actual values from kpiValues
+
+      if (!calculationExpression.match(/^[a-zA-Z0-9_]+\.(min|max|avg|sum)(\s*[\+\-\*\/]\s*[a-zA-Z0-9_]+\.(min|max|avg|sum))*$/)) {
+        throw new Error("Invalid calculation expression format");
+      }
+
       const evaluatedExpression = calculationExpression.replace(
         /([a-zA-Z0-9_]+)\.(min|max|avg|sum)/g,
         (match, col, kpi) => {
-          // Use the kpiValues to get the actual value
           const value = kpiValues[col]?.[kpi];
-          if (value === 'N/A') {
+          if (value === 'N/A' || value === undefined) {
             throw new Error(`KPI value for ${col}.${kpi} is not a number`);
           }
           return value;
@@ -89,40 +127,78 @@ function KPIUploader() {
     }
   };
 
+
+  const handleExportCSV = () => {
+    const csvContent = [
+      ['Column', 'Min', 'Max', 'Avg', 'Sum'],
+      ...selectedColumns.map((column) => [
+        column,
+        kpiValues[column]?.min || 'N/A',
+        kpiValues[column]?.max || 'N/A',
+        kpiValues[column]?.avg || 'N/A',
+        kpiValues[column]?.sum || 'N/A',
+      ]),
+    ]
+      .map((e) => e.join(","))
+      .join("\n");
+
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement("a");
+    link.href = URL.createObjectURL(blob);
+    link.setAttribute("download", "kpi_results.csv");
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
   return (
-    <div className="container">
-      <h2 className="my-4">CSV KPI Uploader</h2>
-      
-      <div className="mb-3">
-        <label htmlFor="formFile" className="form-label">Upload CSV File</label>
-        <input className="form-control" type="file" accept=".csv" onChange={handleFileUpload} />
+    <div className="container mx-auto p-8 bg-gradient-to-r from-blue-100 via-purple-100 to-pink-100 rounded-lg shadow-lg">
+      <h2 className="text-4xl font-extrabold text-gray-900 text-center mb-8">CSV KPI Uploader</h2>
+
+      <div className="mb-6 flex justify-center items-center">
+        <label htmlFor="defaultCSV" className="block text-xl font-medium text-gray-700">Use Default CSV File</label>
+        <input
+          type="checkbox"
+          id="defaultCSV"
+          className="ml-4 h-6 w-6 text-blue-600 rounded-md focus:ring-2 focus:ring-blue-500"
+          checked={useDefaultCSV}
+          onChange={handleUseDefaultCSV}
+        />
       </div>
+
+      {!useDefaultCSV && (
+        <div className="mb-6 flex flex-col items-center">
+          <label htmlFor="formFile" className="block text-xl font-medium text-gray-700 mb-2">Upload CSV File</label>
+          <input
+            className="mt-2 p-3 border border-gray-400 rounded-lg w-full max-w-lg text-center text-lg text-gray-600 cursor-pointer bg-white hover:bg-gray-50 transition-all duration-200"
+            type="file"
+            accept=".csv"
+            onChange={handleFileUpload}
+          />
+        </div>
+      )}
 
       {columnNames.length > 0 && (
         <div>
-          <h3 className="my-3">Select Columns for KPI Calculation:</h3>
-          <div className="column-selection">
+          <h3 className="text-2xl font-semibold text-gray-800 mb-4">Select Columns for KPI Calculation:</h3>
+          <div className="grid grid-cols-2 gap-6 mb-6">
             {columnNames.map((column) => (
-              <div key={column} style={{ marginBottom: '10px', display: 'flex', alignItems: 'center' }}>
+              <div key={column} className="flex items-center bg-white shadow-sm p-4 rounded-lg">
                 <input
                   type="checkbox"
                   id={column}
                   name={column}
                   value={column}
                   onChange={() => handleColumnSelection(column)}
-                  style={{ marginRight: '10px' }}
+                  className="mr-4 h-5 w-5 text-blue-600 focus:ring-2 focus:ring-blue-500"
                 />
-                <label htmlFor={column} style={{ marginRight: '20px', minWidth: '100px' }}>
-                  {column}
-                </label>
+                <label htmlFor={column} className="mr-4 text-lg text-gray-700">{column}</label>
                 <select
                   onChange={(e) => handleKPISelect(column, e.target.value)}
                   defaultValue=""
-                  style={{ width: '115px' }} 
+                  className="p-2 border border-gray-300 rounded-md text-lg bg-gray-50 hover:bg-gray-100 transition-all"
                 >
-                  <option value="" disabled>
-                    Select Value
-                  </option>
+                  <option value="" disabled>Select Value</option>
                   <option value="min">Min</option>
                   <option value="max">Max</option>
                   <option value="avg">Avg</option>
@@ -134,36 +210,34 @@ function KPIUploader() {
         </div>
       )}
 
-      <div>
-        <h3 className="my-3">Perform Calculation:</h3>
-        {selectedColumns.length > 0 && (
-          <div>
-            <p>Use the following variables for calculations:</p>
-            <ul className="list-group">
-              {selectedColumns.map((column) => (
-                <li key={column} className="list-group-item">
-                  {column}: min={kpiValues[column]?.min}, max={kpiValues[column]?.max}, avg={kpiValues[column]?.avg}, sum={kpiValues[column]?.sum}
-                </li>
-              ))}
-            </ul>
-          </div>
-        )}
+      <div className="mt-8">
         <textarea
-          className="form-control my-3"
+          className="w-full p-4 border border-gray-400 rounded-lg text-lg text-gray-700 bg-white shadow-sm focus:ring-2 focus:ring-blue-500"
           rows="4"
           value={calculationExpression}
           placeholder="e.g. column1.sum + column2.avg"
-          onChange={(e) => setCalculationExpression(e.target.value)} // Allow user to modify it
+          onChange={(e) => setCalculationExpression(e.target.value)}
         />
-        <button className="btn btn-primary" onClick={handleCalculation}>Calculate</button>
-
+        <button
+          className="bg-blue-600 text-white px-6 py-3 rounded-lg mt-4 text-lg hover:bg-blue-700 transition-all duration-200 w-full max-w-sm mx-auto block shadow-md"
+          onClick={handleCalculation}
+        >
+          Calculate
+        </button>
         {calculationResult !== null && (
-          <div className="mt-3">
-            <h4>Calculation Result:</h4>
-            <p className="alert alert-info">{calculationResult}</p>
+          <div className="mt-6 p-4 bg-gray-100 text-gray-800 rounded-lg text-lg shadow-md">
+            <h4 className="font-bold text-xl">Calculation Result:</h4>
+            <p>{calculationResult}</p>
           </div>
         )}
       </div>
+
+      <button
+        className="bg-green-600 text-white px-6 py-3 rounded-lg mt-8 text-lg hover:bg-green-700 transition-all duration-200 w-full max-w-sm mx-auto block shadow-md"
+        onClick={handleExportCSV}
+      >
+        Export KPI Results to CSV
+      </button>
     </div>
   );
 }

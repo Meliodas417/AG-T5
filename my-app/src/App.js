@@ -1,8 +1,10 @@
+import React from 'react';
+import KPIUploader from './kpi-formula-parser';
 
 function App() {
   return (
     <div className="App">
-      New App
+      <KPIUploader />  {}
     </div>
   );
 }
