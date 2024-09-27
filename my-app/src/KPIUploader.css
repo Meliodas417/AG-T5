@@ -155,3 +155,16 @@ button:hover {
     font-size: 18px;
     color: #333333;
 }
+
+.chart-container {
+    display: flex;
+    justify-content: space-between;
+}
+
+.Line_chart {
+    width: 700px;
+}
+
+.Doughnut_chart {
+    width: 300px;
+}

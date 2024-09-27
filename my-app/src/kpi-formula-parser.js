@@ -22,10 +22,36 @@ function KPIUploader({ onFileUpload }) {
                     const columns = Object.keys(result.data[0]); // Extract column names from first row
                     setCsvData(result.data); // Set the parsed data
                     setColumnNames(columns); // Set column names
-                    onFileUpload(file.name); // Trigger the callback for file upload
+                    console.log(result.data);
+                    onFileUpload(file.name, result.data); // Trigger the callback for file upload
                 },
             });
         }
+    };
+
+    const prepareDoughnutChartData = (column) => {
+        if (!csvData) return {};
+
+        // Group data by category and count occurrences
+        const categoryCounts = csvData.reduce((acc, row) => {
+            const value = row[column];
+            acc[value] = (acc[value] || 0) + 1;
+            return acc;
+        }, {});
+
+        const labels = Object.keys(categoryCounts);
+        const data = Object.values(categoryCounts);
+
+        return {
+            labels,
+            datasets: [
+                {
+                    data,
+                    backgroundColor: ['#FF6384', '#36A2EB', '#FFCE56', '#99CC33', '#FF9F40'], // colors for the chart
+                    hoverBackgroundColor: ['#FF6384', '#36A2EB', '#FFCE56', '#99CC33', '#FF9F40'],
+                },
+            ],
+        };
     };
 
     // Function to calculate KPI values for a given column
