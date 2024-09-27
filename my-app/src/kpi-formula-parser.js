@@ -9,25 +9,31 @@ function KPIUploader({ onFileUpload }) {
     const [kpiValues, setKpiValues] = useState({});
     const [calculationExpression, setCalculationExpression] = useState('');
     const [calculationResult, setCalculationResult] = useState(null);
-    const [fileName, setFileName] = useState('No file chosen');
+    const [fileName, setFileName] = useState('');
 
-    // Function to handle file upload
     const handleFileUpload = (e) => {
         const file = e.target.files[0];
         if (file) {
-            setFileName(file.name);
+            setFileName(file.name);  // 保存文件名
+            setCsvData(null);  // Reset previous data
+            setColumnNames([]);
+            setSelectedColumns([]);
+            setKpiValues({});
+            setCalculationExpression('');
+            setCalculationResult(null);
+    
             Papa.parse(file, {
                 header: true,
                 complete: (result) => {
                     const columns = Object.keys(result.data[0]); // Extract column names from first row
                     setCsvData(result.data); // Set the parsed data
                     setColumnNames(columns); // Set column names
-                    console.log(result.data);
                     onFileUpload(file.name, result.data); // Trigger the callback for file upload
                 },
             });
         }
     };
+  
 
     const prepareDoughnutChartData = (column) => {
         if (!csvData) return {};
@@ -118,25 +124,12 @@ function KPIUploader({ onFileUpload }) {
         }
     };
 
-    if (!csvData) {
-        return (
-            <div className="file-upload-container">
-                <h2>CSV KPI Uploader</h2>
-                <div className="file-upload">
-                    <input type="file" accept=".csv" onChange={handleFileUpload} />
-                </div>
-            </div>
-        );
-    }
-
     return ( 
         <div>
-            <div className="file-info">
-                <p>Uploaded File: <strong>{fileName}</strong></p> {/* Display file name */}
-                <div className="file-upload">
-                    <input type="file" accept=".csv" onChange={handleFileUpload} /> {/* Allow re-upload */}
-                </div>
+            <div className="file-upload">
+                <input type="file" accept=".csv" onChange={handleFileUpload}/>
             </div>
+
 
             <div className="column-selection">
                 <h3>Select Columns for KPI Calculation:</h3>
