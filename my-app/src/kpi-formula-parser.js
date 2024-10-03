@@ -5,197 +5,143 @@ import './KPIUploader.css';
 function KPIUploader({ onFileUpload }) {
     const [csvData, setCsvData] = useState(null);
     const [columnNames, setColumnNames] = useState([]);
-    const [selectedColumns, setSelectedColumns] = useState([]);
-    const [kpiValues, setKpiValues] = useState({});
-    const [calculationExpression, setCalculationExpression] = useState('');
-    const [calculationResult, setCalculationResult] = useState(null);
+    const [expression, setExpression] = useState('');
     const [fileName, setFileName] = useState('');
+    const [addedColumns, setAddedColumns] = useState([]); // Track added columns
 
     const handleFileUpload = (e) => {
         const file = e.target.files[0];
         if (file) {
-            setFileName(file.name);  // Save file name
-            setCsvData(null);  // Reset previous data
+            setFileName(file.name);
+            setCsvData(null);
             setColumnNames([]);
-            setSelectedColumns([]);
-            setKpiValues({});
-            setCalculationExpression('');
-            setCalculationResult(null);
-    
+            setExpression('');
+            setAddedColumns([]); // Reset added columns on new file upload
+
             Papa.parse(file, {
                 header: true,
                 complete: (result) => {
-                    const columns = Object.keys(result.data[0]); // Extract column names from the first row
-                    setCsvData(result.data); // Set the parsed data
-                    setColumnNames(columns); // Set column names
-                    onFileUpload(file.name, result.data); // Trigger the callback for file upload
+                    const columns = Object.keys(result.data[0]);
+                    setCsvData(result.data);
+                    setColumnNames(columns);
+                    onFileUpload(file.name, result.data);
                 },
             });
         }
     };
 
-    const prepareDoughnutChartData = (column) => {
-        if (!csvData) return {};
+    const handleExpression = () => {
+        if (!csvData) return;
 
-        // Group data by category and count occurrences
-        const categoryCounts = csvData.reduce((acc, row) => {
-            const value = row[column];
-            acc[value] = (acc[value] || 0) + 1;
-            return acc;
-        }, {});
-
-        const labels = Object.keys(categoryCounts);
-        const data = Object.values(categoryCounts);
-
-        return {
-            labels,
-            datasets: [
-                {
-                    data,
-                    backgroundColor: ['#FF6384', '#36A2EB', '#FFCE56', '#99CC33', '#FF9F40'], // colors for the chart
-                    hoverBackgroundColor: ['#FF6384', '#36A2EB', '#FFCE56', '#99CC33', '#FF9F40'],
-                },
-            ],
-        };
-    };
-
-    // Function to calculate KPI values for a given column
-    const calculateKPI = (column) => {
-        const values = csvData
-            .map((row) => parseFloat(row[column]))
-            .filter((val) => !isNaN(val)); // Filter out non-numeric values
-
-        if (values.length === 0) {
-            // If no numeric values are present, return N/A for all KPIs
-            return { min: 'N/A', max: 'N/A', avg: 'N/A', sum: 'N/A' };
+        const newColumnName = prompt("Enter a name for the new column:");
+        if (!newColumnName) {
+            alert("Column name cannot be empty.");
+            return;
         }
 
-        const sum = values.reduce((acc, val) => acc + val, 0);
-        const min = Math.min(...values);
-        const max = Math.max(...values);
-        const avg = sum / values.length || 0;
-
-        return { min, max, avg, sum };
-    };
-
-    // Function to handle column selection and calculate KPIs
-    const handleColumnSelection = (column) => {
-        if (selectedColumns.includes(column)) {
-            setSelectedColumns(selectedColumns.filter((col) => col !== column));
-            const { [column]: _, ...rest } = kpiValues; // Remove column KPI from state
-            setKpiValues(rest);
-        } else {
-            const kpiForColumn = calculateKPI(column);
-            setSelectedColumns([...selectedColumns, column]);
-            setKpiValues({
-                ...kpiValues,
-                [column]: kpiForColumn,
-            });
-        }
-    };
-
-    // Function to handle dropdown selection
-    const handleKPISelect = (column, kpi) => {
-        const expressionPart = `${column}.${kpi}`;
-        setCalculationExpression((prev) => prev + (prev.length ? ' ' : '') + expressionPart);
-    };
-
-    // Function to evaluate user input calculation
-    const handleCalculation = () => {
         try {
-            // Replace KPI placeholders with actual values from kpiValues
-            const evaluatedExpression = calculationExpression.replace(
-                /([a-zA-Z0-9_]+)\.(min|max|avg|sum)/g,
-                (match, col, kpi) => {
-                    // Use the kpiValues to get the actual value
-                    const value = kpiValues[col]?.[kpi];
-                    if (value === 'N/A') {
-                        throw new Error(`KPI value for ${col}.${kpi} is not a number`);
-                    }
-                    return value;
-                }
-            );
+            console.log("Column Names:", columnNames);
 
-            const result = eval(evaluatedExpression);
-            setCalculationResult(result);
+            const updatedData = csvData.map((row) => {
+                const evaluatedExpression = expression.replace(
+                    /([a-zA-Z_][a-zA-Z0-9_]*)/g,
+                    (match) => {
+                        if (columnNames.includes(match)) {
+                            const rawValue = row[match];
+                            console.log(`Raw value for ${match}:`, rawValue);
+                            const value = parseFloat(rawValue);
+                            console.log(`Parsed value for ${match}:`, value);
+                            if (isNaN(value)) {
+                                console.warn(`Skipping row due to non-numeric data in column ${match}:`, row);
+                                return 'NaN';
+                            }
+                            return value;
+                        }
+                        return match;
+                    }
+                );
+
+                if (evaluatedExpression.includes('NaN')) {
+                    return row;
+                }
+
+                console.log(`Evaluating expression: ${evaluatedExpression}`);
+                const newValue = eval(evaluatedExpression);
+                return { ...row, [newColumnName]: newValue };
+            });
+
+            setCsvData(updatedData);
+            setColumnNames([...columnNames, newColumnName]);
+            setAddedColumns([...addedColumns, newColumnName]); // Track the new column
+            onFileUpload(fileName, updatedData);
         } catch (error) {
-            setCalculationResult('Error in calculation: ' + error.message);
+            console.error('Error in expression:', error.message);
+            alert('Error in expression: ' + error.message);
         }
     };
 
-    return ( 
+    const handleDeleteColumn = (columnName) => {
+        const updatedData = csvData.map(row => {
+            const { [columnName]: _, ...rest } = row; // Remove the column
+            return rest;
+        });
+
+        setCsvData(updatedData);
+        setAddedColumns(addedColumns.filter(column => column !== columnName)); // Remove from added columns
+        setColumnNames(columnNames.filter(column => column !== columnName)); // Remove from column names
+        onFileUpload(fileName, updatedData); // Update the parent component with the new data
+    };
+
+    return (
         <div>
             <div className="file-upload">
                 <input type="file" accept=".csv" onChange={handleFileUpload} />
             </div>
 
-            {/* Only display the following sections if a file is uploaded */}
             {csvData && (
                 <>
                     <div className="column-selection">
-                        <h3>Select Columns for KPI Calculation:</h3>
+                        <h3>Available Columns:</h3>
                         {columnNames.map((column) => (
                             <div key={column} className="column-item">
-                                <input
-                                    type="checkbox"
-                                    id={column}
-                                    name={column}
-                                    value={column}
-                                    onChange={() => handleColumnSelection(column)}
-                                />
-                                <label htmlFor={column}>{column}</label>
-                                <select
-                                    onChange={(e) => handleKPISelect(column, e.target.value)}
-                                    defaultValue=""
-                                >
-                                    <option value="" disabled>
-                                        Select Value
-                                    </option>
-                                    <option value="min">Min</option>
-                                    <option value="max">Max</option>
-                                    <option value="avg">Avg</option>
-                                    <option value="sum">Sum</option>
-                                </select>
+                                <label>{column}</label>
                             </div>
                         ))}
                     </div>
 
                     <div>
-                        <h3>Perform Calculation:</h3>
-                        {selectedColumns.length > 0 && (
-                            <div>
-                                <p>Use the following variables for calculations:</p>
-                                <ul>
-                                    {selectedColumns.map((column) => (
-                                        <li key={column}>
-                                            {column}: min={kpiValues[column]?.min}, max={kpiValues[column]?.max}, avg={kpiValues[column]?.avg}, sum={kpiValues[column]?.sum}
-                                        </li>
-                                    ))}
-                                </ul>
-                            </div>
-                        )}
+                        <h3>Enter Expression:</h3>
                         <textarea
                             rows="4"
                             cols="50"
                             style={{ width: '300px' }}
-                            value={calculationExpression}
-                            placeholder="e.g. column1.sum + column2.avg"
-                            onChange={(e) => setCalculationExpression(e.target.value)} // Allow user to modify it
+                            value={expression}
+                            placeholder="e.g. column1 + column2"
+                            onChange={(e) => setExpression(e.target.value)}
                         />
                         <br />
-                        <button onClick={handleCalculation}>Calculate</button>
+                        <button onClick={handleExpression}>Generate New Column</button>
+                    </div>
 
-                        {calculationResult !== null && (
-                            <div className="result">
-                                <h4>Calculation Result:</h4>
-                                <p>{calculationResult}</p>
-                            </div>
+                    <div className="added-columns">
+                        <h3>Added Columns:</h3>
+                        {addedColumns.length > 0 ? (
+                            <ul>
+                                {addedColumns.map((column) => (
+                                    <li key={column}>
+                                        {column}
+                                        <button onClick={() => handleDeleteColumn(column)}>Delete</button>
+                                    </li>
+                                ))}
+                            </ul>
+                        ) : (
+                            <p>No columns added yet.</p>
                         )}
                     </div>
                 </>
             )}
         </div>
-    ); 
+    );
 }
 
 export default KPIUploader;
