@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import './KPIUploader.css';
 import KPIUploader from './kpi-formula-parser';
 import { Line, Doughnut } from 'react-chartjs-2';
-import { Chart, CategoryScale, LinearScale, PointElement, LineElement, Title, Tooltip, Legend, ArcElement} from 'chart.js';
+import { Chart, CategoryScale, LinearScale, PointElement, LineElement, Title, Tooltip, Legend, ArcElement } from 'chart.js';
 
 Chart.register(CategoryScale, LinearScale, PointElement, LineElement, Title, Tooltip, Legend, ArcElement);
 
@@ -10,11 +10,14 @@ function App() {
     const [fileUploaded, setFileUploaded] = useState(false);
     const [fileName, setFileName] = useState('');
     const [csvData, setCsvData] = useState([]);
+    const [currentPage, setCurrentPage] = useState(1);
+    const rowsPerPage = 10;
 
     const handleFileUpload = (uploadedfileName, parsedCsvData) => {
         setFileUploaded(true);
         setFileName(uploadedfileName);
         setCsvData(parsedCsvData);
+        setCurrentPage(1); // Reset to first page on new file upload
     };
 
     const generateChartData = () => {
@@ -63,16 +66,56 @@ function App() {
             x: {
                 title: {
                     display: true,
-                    text: 'Timestamp', 
+                    text: 'Timestamp',
                 },
             },
             y: {
                 title: {
                     display: true,
-                    text: 'Signal Strength', 
+                    text: 'Signal Strength',
                 },
             },
         },
+    };
+
+    const renderCsvTable = () => {
+        if (csvData.length === 0) return null;
+
+        const headers = Object.keys(csvData[0]);
+        const startIndex = (currentPage - 1) * rowsPerPage;
+        const currentData = csvData.slice(startIndex, startIndex + rowsPerPage);
+
+        return (
+            <div>
+                <table className="csv-table">
+                    <thead>
+                        <tr>
+                            {headers.map((header) => (
+                                <th key={header}>{header}</th>
+                            ))}
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {currentData.map((row, index) => (
+                            <tr key={index}>
+                                {headers.map((header) => (
+                                    <td key={header}>{row[header]}</td>
+                                ))}
+                            </tr>
+                        ))}
+                    </tbody>
+                </table>
+                <div className="pagination">
+                    <button onClick={() => setCurrentPage(currentPage - 1)} disabled={currentPage === 1}>
+                        Previous
+                    </button>
+                    <span>Page {currentPage}</span>
+                    <button onClick={() => setCurrentPage(currentPage + 1)} disabled={startIndex + rowsPerPage >= csvData.length}>
+                        Next
+                    </button>
+                </div>
+            </div>
+        );
     };
 
     return (
@@ -88,22 +131,23 @@ function App() {
                     </div>
                 ) : (
                     <div className="card">
-                            <h2>Welcome to the KPI Uploader!</h2>
-                            <p>File uploaded: <strong>{fileName}</strong></p>
-                            
-                            <div className="Line_chart">
-                                <Line data={generateChartData()} options={chartOptions} />
-                            </div>
+                        <h2>Welcome to the KPI Uploader!</h2>
+                        <p>File uploaded: <strong>{fileName}</strong></p>
 
-                            <div className="Doughnut_chart">
-                                <Doughnut data={generatePieChartData()} />
-                            </div>
+                        {renderCsvTable()}
 
+                        <div className="Line_chart">
+                            <Line data={generateChartData()} options={chartOptions} />
+                        </div>
+
+                        <div className="Doughnut_chart">
+                            <Doughnut data={generatePieChartData()} />
+                        </div>
                     </div>
                 )}
             </div>
         </div>
     );
-} 
+}
 
 export default App;

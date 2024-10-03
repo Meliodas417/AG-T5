@@ -168,3 +168,45 @@ button:hover {
 .Doughnut_chart {
     width: 300px;
 }
+
+.csv-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-bottom: 20px;
+}
+
+.csv-table th, .csv-table td {
+    border: 1px solid #ddd;
+    padding: 8px;
+}
+
+.csv-table th {
+    background-color: #f2f2f2;
+    text-align: left;
+}
+
+.pagination {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    margin-top: 10px;
+}
+
+.pagination button {
+    padding: 5px 10px;
+    margin: 0 5px;
+    background-color: #99CC33;
+    color: #FFFFFF;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+}
+
+.pagination button:disabled {
+    background-color: #cccccc;
+    cursor: not-allowed;
+}
+
+.pagination span {
+    margin: 0 10px;
+}
