@@ -1,5 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import Papa from 'papaparse';
+import { useTable } from 'react-table';  // 引入 react-table
 
 function KPIUploader() {
   const [csvData, setCsvData] = useState(null);
@@ -9,8 +10,15 @@ function KPIUploader() {
   const [calculationExpression, setCalculationExpression] = useState('');
   const [calculationResult, setCalculationResult] = useState(null);
   const [useDefaultCSV, setUseDefaultCSV] = useState(false);
+  const [history, setHistory] = useState([]); // 用于保存历史记录
 
+  // 从 localStorage 加载历史记录
+  useEffect(() => {
+    const storedHistory = JSON.parse(localStorage.getItem('kpiHistory')) || [];
+    setHistory(storedHistory);
+  }, []);
 
+  // 处理文件上传
   const handleFileUpload = (e) => {
     const file = e.target.files[0];
     if (file) {
@@ -32,6 +40,11 @@ function KPIUploader() {
     });
   };
 
+  // 使用 react-table 展示 CSV 数据
+  const columns = useMemo(() => columnNames.map((col) => ({ Header: col, accessor: col })), [columnNames]);
+  const data = useMemo(() => csvData || [], [csvData]);
+
+  const { getTableProps, getTableBodyProps, headerGroups, rows, prepareRow } = useTable({ columns, data });
 
   const handleUseDefaultCSV = () => {
     setUseDefaultCSV(!useDefaultCSV);
@@ -42,7 +55,6 @@ function KPIUploader() {
       setColumnNames([]);
     }
   };
-
 
   const fetchDefaultCSV = () => {
     const defaultCSV = `
@@ -79,7 +91,6 @@ Operating Costs,28000,25000,2024-02-01
     return { min, max, avg, sum };
   };
 
-
   const handleColumnSelection = (column) => {
     if (selectedColumns.includes(column)) {
       setSelectedColumns(selectedColumns.filter((col) => col !== column));
@@ -95,16 +106,13 @@ Operating Costs,28000,25000,2024-02-01
     }
   };
 
-
   const handleKPISelect = (column, kpi) => {
     const expressionPart = `${column}.${kpi}`;
     setCalculationExpression((prev) => prev + (prev.length ? ' ' : '') + expressionPart);
   };
 
-
   const handleCalculation = () => {
     try {
-
       if (!calculationExpression.match(/^[a-zA-Z0-9_]+\.(min|max|avg|sum)(\s*[\+\-\*\/]\s*[a-zA-Z0-9_]+\.(min|max|avg|sum))*$/)) {
         throw new Error("Invalid calculation expression format");
       }
@@ -122,11 +130,15 @@ Operating Costs,28000,25000,2024-02-01
 
       const result = eval(evaluatedExpression);
       setCalculationResult(result);
+
+      // 保存历史记录
+      const newHistory = [...history, { expression: calculationExpression, result }];
+      setHistory(newHistory);
+      localStorage.setItem('kpiHistory', JSON.stringify(newHistory));
     } catch (error) {
       setCalculationResult('Error in calculation: ' + error.message);
     }
   };
-
 
   const handleExportCSV = () => {
     const csvContent = [
@@ -230,6 +242,18 @@ Operating Costs,28000,25000,2024-02-01
             <p>{calculationResult}</p>
           </div>
         )}
+      </div>
+
+      {/* 显示历史记录 */}
+      <div className="mt-8">
+        <h3 className="text-2xl font-semibold text-gray-800 mb-4">KPI Calculation History</h3>
+        <ul className="list-disc pl-5">
+          {history.map((entry, index) => (
+            <li key={index} className="mb-2">
+              Expression: {entry.expression} | Result: {entry.result}
+            </li>
+          ))}
+        </ul>
       </div>
 
       <button
