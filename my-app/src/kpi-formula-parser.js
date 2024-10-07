@@ -8,6 +8,7 @@ function KPIUploader({ onFileUpload }) {
     const [expression, setExpression] = useState('');
     const [fileName, setFileName] = useState('');
     const [addedColumns, setAddedColumns] = useState([]); // Track added columns
+    const [savedColumns, setSavedColumns] = useState([]); // Track saved columns
 
     const handleFileUpload = (e) => {
         const file = e.target.files[0];
@@ -17,6 +18,7 @@ function KPIUploader({ onFileUpload }) {
             setColumnNames([]);
             setExpression('');
             setAddedColumns([]); // Reset added columns on new file upload
+            setSavedColumns([]); // Reset saved columns on new file upload
 
             Papa.parse(file, {
                 header: true,
@@ -73,6 +75,7 @@ function KPIUploader({ onFileUpload }) {
             setCsvData(updatedData);
             setColumnNames([...columnNames, newColumnName]);
             setAddedColumns([...addedColumns, newColumnName]); // Track the new column
+            // New columns are not saved by default
             onFileUpload(fileName, updatedData);
         } catch (error) {
             console.error('Error in expression:', error.message);
@@ -89,7 +92,49 @@ function KPIUploader({ onFileUpload }) {
         setCsvData(updatedData);
         setAddedColumns(addedColumns.filter(column => column !== columnName)); // Remove from added columns
         setColumnNames(columnNames.filter(column => column !== columnName)); // Remove from column names
+        setSavedColumns(savedColumns.filter(column => column !== columnName)); // Remove from saved columns
         onFileUpload(fileName, updatedData); // Update the parent component with the new data
+    };
+
+    const handleToggleSaveColumn = (columnName) => {
+        if (savedColumns.includes(columnName)) {
+            // If already saved, remove from saved columns
+            setSavedColumns(savedColumns.filter(column => column !== columnName));
+        } else {
+            // If not saved, add to saved columns
+            setSavedColumns([...savedColumns, columnName]);
+        }
+    };
+
+    const handleExport = () => {
+        if (!csvData) return;
+
+        const exportFileName = prompt("Enter a name for the exported file:", "exported_data.csv");
+        if (!exportFileName) {
+            alert("File name cannot be empty.");
+            return;
+        }
+
+        // Filter the data to include only saved columns
+        const exportData = csvData.map(row => {
+            const newRow = {};
+            savedColumns.forEach(column => {
+                if (column in row) {
+                    newRow[column] = row[column];
+                }
+            });
+            return newRow;
+        });
+
+        const csvContent = Papa.unparse(exportData);
+        const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.setAttribute('download', exportFileName.endsWith('.csv') ? exportFileName : `${exportFileName}.csv`);
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
     };
 
     return (
@@ -131,12 +176,19 @@ function KPIUploader({ onFileUpload }) {
                                     <li key={column}>
                                         {column}
                                         <button onClick={() => handleDeleteColumn(column)}>Delete</button>
+                                        <button onClick={() => handleToggleSaveColumn(column)}>
+                                            {savedColumns.includes(column) ? 'Saved' : 'Save'}
+                                        </button>
                                     </li>
                                 ))}
                             </ul>
                         ) : (
                             <p>No columns added yet.</p>
                         )}
+                    </div>
+
+                    <div>
+                        <button onClick={handleExport}>Export CSV</button>
                     </div>
                 </>
             )}
