@@ -1,0 +1,212 @@
+/* KPIUploader.css */
+.App {
+    display: flex;
+    height: 100vh;
+    font-family: 'Roboto', sans-serif;
+    background-color: #f5f5f5;
+}
+
+.sidebar {
+    width: 250px;
+    background-color: #FFFFFF;
+    padding: 15px;
+    box-shadow: 2px 0 5px rgba(0, 0, 0, 0.1);
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
+
+.content {
+    flex-grow: 1;
+    margin-left: 20px;
+    padding: 20px;
+    background-color: #f9f9f9;
+    height: 100vh;
+}
+
+.body {
+    background-color: #F5F5F5;
+    color: #000000;
+    font-family: 'Roboto', sans-serif;
+}
+
+h2, h4 {
+    color: #99CC33;
+}
+
+h3 {
+    font-size: 16px;
+    color: #99CC33;
+    margin-bottom: 20px;
+}
+
+.upload-card {
+    background-color: #ffffff;
+    border: 1px solid #E0E0E0;
+    border-radius: 10px;
+    padding: 15px;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+    margin-bottom: 20px;
+}
+
+.kpi-selection-card {
+    background-color: #ffffff;
+    border: 1px solid #E0E0E0;
+    border-radius: 10px;
+    padding: 15px;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+file-upload-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    height: 100vh;
+}
+
+.file-upload input[type="file"]{
+    background-color: #99CC33;
+    border: none;
+    color: #FFFFFF;
+    padding: 10px;
+    font-size: 14px;
+    border-radius:5px;
+    margin-bottom: 20px;
+}
+
+.file-upload input[type="file"]:hover {
+    background-color: #669933;
+}
+
+.file-into p {
+    font-size: 14px;
+    color: #666;
+}
+
+.file-name {
+    margin-top: 10px;
+    font-size: 14px;
+    color: #666666;
+}
+
+.column-section {
+    margin-bottom: 10px;
+}
+
+.column-item {
+    margin-bottom: 8px;
+    display: flex;
+    align-items: center;
+}
+
+.column-item input[type="checkbox"]{
+    accent-color: #99CC33;
+    margin-right: 10px;
+    width: 16px;
+    height: 16px;
+}
+
+.column-item label{
+    font-size: 14px;
+    color: #333;
+    margin-right: 10px;
+    flex-grow: 1;
+}
+
+    .column-item select {
+        background-color: #FFFFFF;
+        color: #000000;
+        border: 1px solid #99CC33;
+        padding: 3px  5px;
+        margin-left: 10px;
+        font-size: 14px;
+    }
+
+.calculation-section textarea {
+    width: 300px !important;
+    background-color: #FFFFFF;
+    color: #000000;
+    border: 1px solid #99CC33;
+    padding: 10px;
+    margin-top: 10px;
+    margin-bottom: 10px;
+    border-radius: 5px;
+}
+
+button {
+    padding: 8px 12px;
+    background-color: #99CC33;
+    color: #FFFFFF;
+    border: none;
+    font-size: 14px;
+    border-radius: 5px;
+    cursor: pointer;
+}
+
+button:hover {
+    background-color: #669933;
+    box-shadow: 0px 0px 8px #669933;
+}
+
+.result {
+    margin-top: 20px;
+    font-size: 18px;
+    color: #333333;
+}
+
+.chart-container {
+    display: flex;
+    justify-content: space-between;
+}
+
+.Line_chart {
+    width: 700px;
+}
+
+.Doughnut_chart {
+    width: 300px;
+}
+
+.csv-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-bottom: 20px;
+}
+
+.csv-table th, .csv-table td {
+    border: 1px solid #ddd;
+    padding: 8px;
+}
+
+.csv-table th {
+    background-color: #f2f2f2;
+    text-align: left;
+}
+
+.pagination {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    margin-top: 10px;
+}
+
+.pagination button {
+    padding: 5px 10px;
+    margin: 0 5px;
+    background-color: #99CC33;
+    color: #FFFFFF;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+}
+
+.pagination button:disabled {
+    background-color: #cccccc;
+    cursor: not-allowed;
+}
+
+.pagination span {
+    margin: 0 10px;
+}
