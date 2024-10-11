@@ -1,32 +1,76 @@
 import React, { useState } from 'react';
 import Papa from 'papaparse';
+import alasql from 'alasql';
 import './KPIUploader.css';
 
-function KPIUploader({ onFileUpload }) {
-    const [csvData, setCsvData] = useState(null);
+function KPIUploader({ onFileUpload, onTableCreated, onCommonColumnsChange, currentData }) {
+    const [csvData, setCsvData] = useState([]);
     const [columnNames, setColumnNames] = useState([]);
     const [expression, setExpression] = useState('');
     const [fileName, setFileName] = useState('');
-    const [addedColumns, setAddedColumns] = useState([]); // Track added columns
-    const [savedColumns, setSavedColumns] = useState([]); // Track saved columns
+    const [addedColumns, setAddedColumns] = useState([]);
+    const [savedColumns, setSavedColumns] = useState([]);
+    const [fileUploaded, setFileUploaded] = useState(false);
+
+    const calculateCommonColumns = () => {
+        const allTables = Object.keys(alasql.tables);
+        if (allTables.length > 1) {
+            let common = null;
+
+            allTables.forEach((tableName, index) => {
+                const tableColumns = alasql(`SHOW COLUMNS FROM ${tableName}`).map(col => col.columnid);
+                console.log(`Columns in ${tableName}:`, tableColumns);
+
+                if (index === 0) {
+                    common = new Set(tableColumns);
+                } else {
+                    common = new Set([...common].filter(x => tableColumns.includes(x)));
+                }
+            });
+
+            const commonArray = Array.from(common);
+            console.log('Common Columns across all tables:', commonArray);
+            onCommonColumnsChange(commonArray);
+        } else {
+            console.log('Not enough tables to find common columns.');
+            onCommonColumnsChange([]);
+        }
+    };
 
     const handleFileUpload = (e) => {
         const file = e.target.files[0];
         if (file) {
+            const newFileName = file.name.replace(/\.[^/.]+$/, ""); // Use file name without extension
             setFileName(file.name);
-            setCsvData(null);
+            setCsvData([]);
             setColumnNames([]);
             setExpression('');
-            setAddedColumns([]); // Reset added columns on new file upload
-            setSavedColumns([]); // Reset saved columns on new file upload
+            setAddedColumns([]);
+            setSavedColumns([]);
+            setFileUploaded(true);
 
             Papa.parse(file, {
-                header: true,
+                header: true, // Ensure headers are parsed
                 complete: (result) => {
+                    if (result.data.length === 0) {
+                        console.error('No data found in CSV file.');
+                        return;
+                    }
+
                     const columns = Object.keys(result.data[0]);
                     setCsvData(result.data);
                     setColumnNames(columns);
                     onFileUpload(file.name, result.data);
+
+                    // Use the file name (without extension) as the table name
+                    alasql(`DROP TABLE IF EXISTS ${newFileName}`);
+                    alasql(`CREATE TABLE ${newFileName} (${columns.map(col => `[${col}] STRING`).join(', ')})`);
+                    alasql(`INSERT INTO ${newFileName} SELECT * FROM ?`, [result.data]);
+
+                    onTableCreated(newFileName);
+
+                    // Calculate common columns after creating the new table
+                    calculateCommonColumns();
                 },
             });
         }
@@ -74,8 +118,7 @@ function KPIUploader({ onFileUpload }) {
 
             setCsvData(updatedData);
             setColumnNames([...columnNames, newColumnName]);
-            setAddedColumns([...addedColumns, newColumnName]); // Track the new column
-            // New columns are not saved by default
+            setAddedColumns([...addedColumns, newColumnName]);
             onFileUpload(fileName, updatedData);
         } catch (error) {
             console.error('Error in expression:', error.message);
@@ -85,29 +128,27 @@ function KPIUploader({ onFileUpload }) {
 
     const handleDeleteColumn = (columnName) => {
         const updatedData = csvData.map(row => {
-            const { [columnName]: _, ...rest } = row; // Remove the column
+            const { [columnName]: _, ...rest } = row;
             return rest;
         });
 
         setCsvData(updatedData);
-        setAddedColumns(addedColumns.filter(column => column !== columnName)); // Remove from added columns
-        setColumnNames(columnNames.filter(column => column !== columnName)); // Remove from column names
-        setSavedColumns(savedColumns.filter(column => column !== columnName)); // Remove from saved columns
-        onFileUpload(fileName, updatedData); // Update the parent component with the new data
+        setAddedColumns(addedColumns.filter(column => column !== columnName));
+        setColumnNames(columnNames.filter(column => column !== columnName));
+        setSavedColumns(savedColumns.filter(column => column !== columnName));
+        onFileUpload(fileName, updatedData);
     };
 
     const handleToggleSaveColumn = (columnName) => {
         if (savedColumns.includes(columnName)) {
-            // If already saved, remove from saved columns
             setSavedColumns(savedColumns.filter(column => column !== columnName));
         } else {
-            // If not saved, add to saved columns
             setSavedColumns([...savedColumns, columnName]);
         }
     };
 
     const handleExport = () => {
-        if (!csvData) return;
+        if (!currentData || currentData.length === 0) return;
 
         const exportFileName = prompt("Enter a name for the exported file:", "exported_data.csv");
         if (!exportFileName) {
@@ -115,18 +156,7 @@ function KPIUploader({ onFileUpload }) {
             return;
         }
 
-        // Filter the data to include only saved columns
-        const exportData = csvData.map(row => {
-            const newRow = {};
-            savedColumns.forEach(column => {
-                if (column in row) {
-                    newRow[column] = row[column];
-                }
-            });
-            return newRow;
-        });
-
-        const csvContent = Papa.unparse(exportData);
+        const csvContent = Papa.unparse(currentData);
         const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
         const url = URL.createObjectURL(blob);
         const link = document.createElement('a');
@@ -143,7 +173,7 @@ function KPIUploader({ onFileUpload }) {
                 <input type="file" accept=".csv" onChange={handleFileUpload} />
             </div>
 
-            {csvData && (
+            {csvData.length > 0 && (
                 <>
                     <div className="column-selection">
                         <h3>Available Columns:</h3>
