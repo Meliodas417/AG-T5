@@ -210,3 +210,11 @@ button:hover {
 .pagination span {
     margin: 0 10px;
 }
+
+.sidebar select {
+    padding: 8px;
+    margin: 10px 0;
+    width: 100%;
+    border: 1px solid #99CC33;
+    border-radius: 5px;
+}

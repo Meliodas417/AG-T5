@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import './KPIUploader.css';
 import KPIUploader from './kpi-formula-parser';
 import { Line, Doughnut } from 'react-chartjs-2';
@@ -10,20 +10,60 @@ function App() {
     const [fileUploaded, setFileUploaded] = useState(false);
     const [fileName, setFileName] = useState('');
     const [csvData, setCsvData] = useState([]);
+    const [dbData, setDbData] = useState([]);
     const [currentPage, setCurrentPage] = useState(1);
+    const [dataSource, setDataSource] = useState('csv');
     const rowsPerPage = 10;
 
-    const handleFileUpload = (uploadedfileName, parsedCsvData) => {
+    // Function to fetch data from the database
+    const fetchDataFromDatabase = async () => {
+        try {
+            const response = await fetch('http://localhost:5000/api/kpis');
+            const data = await response.json();
+            setDbData(data);
+            setFileUploaded(true); // update statement
+        } catch (error) {
+            console.error('Error fetching KPI data from database:', error);
+        }
+    };
+
+    // Effect to handle data source change
+    useEffect(() => {
+        if (dataSource === 'db') { // if user chooses database as data resource
+            fetchDataFromDatabase();
+        }
+    }, [dataSource]);
+
+    // Handle file upload and sending data to the database
+    const handleFileUpload = async (uploadedfileName, parsedCsvData) => { // <-- Add 'async' here
         setFileUploaded(true);
         setFileName(uploadedfileName);
         setCsvData(parsedCsvData);
         setCurrentPage(1); // Reset to first page on new file upload
+
+        try {
+            const response = await fetch('http://localhost:5000/api/kpis', { // <-- await inside async
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(parsedCsvData),
+            });
+
+            if (!response.ok) {
+                throw new Error('Failed to upload CSV data to the database');
+            }
+
+            console.log('CSV data uploaded to the database successfully');
+        } catch (error) {
+            console.error('Error uploading CSV data to the database:', error);
+        }
     };
 
     const generateChartData = () => {
-        console.log("CSV Data:", csvData);
-        const labels = csvData.map((row) => row['Timestamp']);
-        const dataValues = csvData.map((row) => row['Signal_Strength']);
+        const data = dataSource === 'csv' ? csvData : dbData;
+        const labels = data.map((row) => row['Timestamp']);
+        const dataValues = data.map((row) => row['Signal_Strength']);
 
         return {
             labels: labels,
@@ -39,8 +79,9 @@ function App() {
     };
 
     const generatePieChartData = () => {
-        const labels = csvData.map((row) => row['Application_Type']);
-        const dataValues = csvData.map((row) => row['Resource_Allocation']);
+        const data = dataSource === 'csv' ? csvData : dbData;
+        const labels = data.map((row) => row['Application_Type']);
+        const dataValues = data.map((row) => row['Resource_Allocation']);
 
         return {
             labels: labels,
@@ -78,10 +119,12 @@ function App() {
         },
     };
 
-    const renderCsvTable = () => {
-        if (csvData.length === 0) return null;
+    const renderTable = () => {
+        const data = dataSource === 'csv' ? csvData : dbData;
 
-        const headers = Object.keys(csvData[0]);
+        if (data.length === 0) return null;
+
+        const headers = Object.keys(data[0]);
         const startIndex = (currentPage - 1) * rowsPerPage;
         const currentData = csvData.slice(startIndex, startIndex + rowsPerPage);
 
@@ -121,7 +164,13 @@ function App() {
     return (
         <div className="App">
             <div className="sidebar" style={{ width: fileUploaded ? '300px' : 'auto' }}>
-                <KPIUploader onFileUpload={handleFileUpload} />
+                <label>Select Data Source:</label>
+                <select value={dataSource} onChange={(e) => setDataSource(e.target.value)}>
+                    <option value="csv">CSV File</option>
+                    <option value="db">Database Table</option>
+                </select>
+
+                {dataSource === 'csv' && <KPIUploader onFileUpload={handleFileUpload} />}
             </div>
 
             <div className="content">
@@ -134,7 +183,7 @@ function App() {
                         <h2>Welcome to the KPI Uploader!</h2>
                         <p>File uploaded: <strong>{fileName}</strong></p>
 
-                        {renderCsvTable()}
+                        {renderTable()}
 
                         <div className="Line_chart">
                             <Line data={generateChartData()} options={chartOptions} />
