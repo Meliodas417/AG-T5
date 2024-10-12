@@ -1,6 +1,9 @@
 const express = require('express');
 const mysql = require('mysql2');
-const cors = require('cors'); // Enable cross-origin requests
+const cors = require('cors');
+const dotenv = require('dotenv');
+
+dotenv.config();
 
 const app = express();
 const port = 5000;
@@ -13,10 +16,10 @@ app.use(express.json());
 
 // Create connection to MySQL database
 const db = mysql.createConnection({
-    host: 'localhost',
-    user: 'root',
-    password: 'Mysql021117Ok.', // Replace with your MySQL root password
-    database: 'kpi_database', // Replace with your actual database name
+    host: process.env.DB_HOST,
+    user: process.env.DB_USER,
+    password: process.env.DB_PASSWORD,
+    database: process.env.DB_NAME,
 });
 
 // Connect to MySQL
