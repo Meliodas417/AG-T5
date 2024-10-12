@@ -51,14 +51,43 @@ Here is the project structure for the KPI Uploader integration:
 └── README.md                # Project documentation
 ```
 
-## 4. Running the Application
+## 4. Database Setup
+To ensure that all team members can connect to the same database, follow these steps:
+1. Set up MySQL
+   - Ensure MySQL is installed on your local machine.
+   - Use the following credentials to connect to the database we have set up for the project:
+     ```
+     Database: kpi_database
+     Username: team5_user
+     Password: [to be shared separately]
+     Host: localhost
+     ```
+2. Import Database Schema
+   - The database schema can be found in the `kpi_database.sql` file (make sure to import this schema into your MySQL database if it is not already set up).
+   - Run the following command in your MySQL client to import it:
+     ```
+     mysql -u team5_user -p kpi_database < /path/to/kpi_database.sql
+     ```
+3. Update .env File
+   - Ensure your `.env` file contains the correct the correct database credentials. This file should not be pushed to the repository:
+     ```
+     DB_HOST=localhost
+     DB_USER=team5_user
+     DB_PASS=[your team5 password]
+     DB_NAME=kpi_database
+     ```
+4. Server Setup
+   - The server will read the credentials from the `.env` file, so make sure to pull the latest `server.js` file from the repo and run `npm install` to install necessary dependencies.
+
+
+## 5. Running the Application
 To run the KPI Uploader in your local environment, execute the following commands:
 
 ```bash
 npm start
 ```
 
-## 5. File Upload and Chart Visualization
+## 6. File Upload and Chart Visualization
 The `App.js` component handles file uploading, CSV parsing, table rendering, and chart visualization.
 
 Once a CSV file is uploaded, the data is parsed using PapaParse, and the table and charts (Line chart and Doughnut chart) are displayed.
@@ -71,17 +100,17 @@ Make sure your CSV file contains the following required columns for full functio
   
 You can modify or extend these columns as needed in your CSV files.
 
-## 6. Pagination for CSV Table
+## 7. Pagination for CSV Table
 The application automatically paginates the CSV data, displaying 10 rows per page. You can adjust the number of rows per page by modifying the `rowsPerPage` constant in `App.js`.
 
-## 7. Adding Expressions
+## 8. Adding Expressions
 The `kpi-formula-parser.js` file provides functionality for users to generate new columns by entering expressions based on the existing columns in the CSV data.
 
 Users can input mathematical expressions (e.g., `column1 + column2`) to calculate new values and add them as new columns to the dataset.
 
 New columns can be deleted using the delete button next to each added column.
 
-## 8. Customization
+## 9. Customization
 If you need to customize the chart appearance or behavior, modify the `generateChartData` and `generatePieChartData` functions in `App.js`. You can also adjust chart options like axis labels in the `chartOptions` object.
 
 For additional styling, you can modify the `KPIUploader.css` file. You might want to:
@@ -89,7 +118,7 @@ For additional styling, you can modify the `KPIUploader.css` file. You might wan
 - Customize table styles.
 - Modify the pagination buttons.
 
-## 9. Development
+## 10. Development
 When you are ready to deploy the application, run:
 
 ```bash
@@ -99,7 +128,7 @@ npm run build
 This will create an optimized build of the app in the `/build` directory, which can then be deployed to any static site host (e.g., Netlify, Vercel, GitHub Pages).
 
 
-## 10. Further Steps
+## 11. Further Steps
 If you need to extend the functionality:
 - Adding New Charts: You can add more chart types by following the example of the Line and Doughnut charts in `App.js`. The `react-chartjs-2` library supports various types like Bar, Pie, and Radar charts.
 - Advanced CSV Features: If your use case requires advanced data manipulation, consider implementing more complex formula parsing or additional features like filtering and sorting.
