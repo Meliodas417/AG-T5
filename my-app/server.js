@@ -1,5 +1,5 @@
 const express = require('express');
-const mysql = require('mysql2');
+const sqlite3 = require('sqlite3').verbose();
 const cors = require('cors');
 const dotenv = require('dotenv');
 
@@ -14,33 +14,41 @@ app.use(cors());
 // Middleware to parse JSON
 app.use(express.json());
 
-// Create connection to MySQL database
-const db = mysql.createConnection({
-    host: process.env.DB_HOST,
-    user: process.env.DB_USER,
-    password: process.env.DB_PASSWORD,
-    database: process.env.DB_NAME,
-});
-
-// Connect to MySQL
-db.connect((err) => {
+// Create a new SQLite database connection
+const db = new sqlite3.Database('./kpi_database.db',sqlite3.OPEN_READWRITE | sqlite3.OPEN_CREATE, (err) => {
     if (err) {
-        console.log('Error connecting to MySQL:', err);
+        console.error('Error connecting to SQLite:', err.message);
         return;
     }
-    console.log('Connected to MySQL database');
+    console.log('Connected to the SQLite database.');
+
+    db.run(`
+        CREATE TABLE IF NOT EXISTS kpi_table (
+            timestamp TEXT,
+            signal_strength REAL,
+            application_type TEXT,
+            resource_allocation REAL
+        )
+    `, (err) => {
+        if (err) {
+            console.error('Error creating table:', err.message);
+        } else {
+            console.log('Table "kpi_table" created or already exists.');
+        }
+    });
+
 });
 
 // API endpoint to get data from database table
 app.get('/api/kpis', (req, res) => {
-    const query = 'SELECT * FROM kpi_table'; // Replace with your actual table name
-    db.query(query, (err, results) => {
+    const query = 'SELECT * FROM kpi_table'; 
+    db.all(query, (err, rows) => {
         if (err) {
-            console.log(err);
+            console.error('Error fetching data:', err);
             res.status(500).send('Error fetching data from database');
             return;
         }
-        res.json(results);
+        res.json(rows);
     });
 });
 
@@ -54,9 +62,9 @@ app.post('/api/kpis', (req, res) => {
     data.forEach((row) => {
         const { Timestamp, Signal_Strength, Application_Type, Resource_Allocation } = row;
 
-        db.query(query, [Timestamp, Signal_Strength, Application_Type, Resource_Allocation], (err, results) => {
+        db.run(query, [Timestamp, Signal_Strength, Application_Type, Resource_Allocation], (err, results) => {
             if (err) {
-                console.log('Error inserting data:', err);
+                console.error('Error inserting data:', err);
                 res.status(500).send('Error inserting data into the database');
                 return;
             }
