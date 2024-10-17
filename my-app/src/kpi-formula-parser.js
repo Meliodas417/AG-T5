@@ -67,20 +67,14 @@ function KPIUploader({ onFileUpload, onTableCreated, onCommonColumnsChange, curr
                     setCsvData(result.data);
                     setColumnNames(columns);
                     setSavedColumns(columns);
+
+                    // Call the onFileUpload prop with the parsed data
                     onFileUpload(file.name, result.data, columns);
-
-                    onTableCreated(newFileName);
-
-                    // Escape the table name
-                    const safeTableName = `"${newFileName}"`;
-
-                    // Use the escaped table name in SQL queries
-                    alasql(`DROP TABLE IF EXISTS ${safeTableName}`);
-                    alasql(`CREATE TABLE ${safeTableName} (${columns.map(col => `[${col}] STRING`).join(', ')})`);
-                    alasql(`INSERT INTO ${safeTableName} SELECT ${columns.map(col => `[${col}]`).join(', ')} FROM ?`, [result.data]);
-
-                    calculateCommonColumns();
                 },
+                error: (error) => {
+                    console.error('Error parsing CSV:', error);
+                    alert('Error parsing CSV file');
+                }
             });
         }
     };

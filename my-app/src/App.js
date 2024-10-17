@@ -66,12 +66,12 @@ function App() {
     // New function to create AlaSQL table
     const createAlaSQLTable = (data) => {
         if (data && data.length > 0) {
-            const tableName = 'dbData';
+            const tableName = 'csvData';  // Change this to 'csvData' for CSV files
             try {
-                alasql('DROP TABLE IF EXISTS [dbData]');
-                const createTableQuery = `CREATE TABLE [${tableName}] (${Object.keys(data[0]).map(col => `[${col}] STRING`).join(', ')})`;
+                alasql('DROP TABLE IF EXISTS csvData');
+                const createTableQuery = `CREATE TABLE ${tableName} (${Object.keys(data[0]).map(col => `[${col}] STRING`).join(', ')})`;
                 alasql(createTableQuery);
-                alasql(`INSERT INTO [${tableName}] SELECT * FROM ?`, [data]);
+                alasql(`INSERT INTO ${tableName} SELECT * FROM ?`, [data]);
                 console.log('Data inserted into AlaSQL table');
             } catch (e) {
                 console.error('Error in AlaSQL operations:', e);
@@ -101,6 +101,8 @@ function App() {
         setColumnNames(columns || Object.keys(data[0]));
         setIsJoinedData(uploadedFileName.startsWith("Joined_Data"));
         setCurrentPage(1);
+        setIsDataLoaded(true);  // Add this line to indicate that data is loaded
+        createAlaSQLTable(data);  // Add this line to create the AlaSQL table
     };
 
     // Example SQL operation: Join CSV and DB data
@@ -130,6 +132,11 @@ function App() {
 
     const generateChartData = () => {
         const data = dataSource === 'csv' ? csvData : dbData;
+        if (!data || data.length === 0) {
+            console.log('No data available for generating chart');
+            return { labels: [], datasets: [] };
+        }
+
         const labels = data.map((row) => row['Timestamp']);
         const dataValues = data.map((row) => row['Signal_Strength']);
 
@@ -148,6 +155,11 @@ function App() {
 
     const generatePieChartData = () => {
         const data = dataSource === 'csv' ? csvData : dbData;
+        if (!data || data.length === 0) {
+            console.log('No data available for generating pie chart');
+            return { labels: [], datasets: [] };
+        }
+
         const labels = data.map((row) => row['Application_Type']);
         const dataValues = data.map((row) => row['Resource_Allocation']);
 
@@ -190,7 +202,10 @@ function App() {
     const renderTable = () => {
         const data = isJoinedData ? currentData : (dataSource === 'csv' ? csvData : dbData);
 
-        if (data.length === 0) return null;
+        if (!data || data.length === 0) {
+            console.log('No data available for rendering table');
+            return null;
+        }
 
         // Get the original column order
         const originalHeaders = Object.keys(data[0]);
