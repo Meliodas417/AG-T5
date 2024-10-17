@@ -208,6 +208,47 @@ function KPIUploader({ onFileUpload, onTableCreated, onCommonColumnsChange, curr
         document.body.removeChild(link);
     };
 
+    const handleImport = async () => {
+        if (!currentData || currentData.length === 0) {
+            alert('No data to import');
+            return;
+        }
+
+        const tableName = fileName.replace(/\.[^/.]+$/, "");
+        if (!tableName) {
+            alert('Invalid table name');
+            return;
+        }
+
+        console.log('Data to be imported:', currentData);
+        console.log('Table name:', tableName);
+
+        try {
+            const response = await fetch('http://localhost:8001/api/import_kpis', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    data: currentData,
+                    table_name: tableName
+                }),
+            });
+
+            if (!response.ok) {
+                const errorData = await response.json();
+                console.error('Error response:', errorData);
+                throw new Error(`HTTP error! status: ${response.status}, message: ${JSON.stringify(errorData)}`);
+            }
+
+            const result = await response.json();
+            alert(result.message);
+        } catch (error) {
+            console.error('Error importing data:', error);
+            alert('Error importing data: ' + error.message);
+        }
+    };
+
     return (
         <div>
             <div className="file-upload">
@@ -260,6 +301,7 @@ function KPIUploader({ onFileUpload, onTableCreated, onCommonColumnsChange, curr
 
                     <div>
                         <button onClick={handleExport}>Export CSV</button>
+                        <button onClick={handleImport}>Import to Database</button>
                     </div>
                 </>
             )}

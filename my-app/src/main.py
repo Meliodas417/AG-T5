@@ -1,8 +1,10 @@
 import logging
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Body
 from fastapi.middleware.cors import CORSMiddleware
 import sqlite3
 import os
+from typing import List, Dict
+from pydantic import BaseModel
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -23,12 +25,22 @@ def get_db_connection():
     try:
         script_dir = os.path.dirname(os.path.abspath(__file__))
         db_path = os.path.join(script_dir, 'database_sample_data.db')
-        conn = sqlite3.connect(db_path)
+        conn = sqlite3.connect(db_path, timeout=10)
+        conn.execute('PRAGMA journal_mode=WAL')
         conn.row_factory = sqlite3.Row
         return conn
     except sqlite3.Error as e:
         print(f"Database connection error: {e}")
-        raise HTTPException(status_code=500, detail="Database connection error")
+        raise HTTPException(status_code=500, detail=f"Database connection error: {str(e)}")
+
+def ensure_table_exists(conn):
+    cursor = conn.cursor()
+    cursor.execute("""
+    CREATE TABLE IF NOT EXISTS kpis (
+        id INTEGER PRIMARY KEY AUTOINCREMENT
+    )
+    """)
+    conn.commit()
 
 @app.get("/")
 async def root():
@@ -49,6 +61,70 @@ async def read_kpis():
     except Exception as e:
         print(f"Unexpected error: {e}")
         raise HTTPException(status_code=500, detail="Unexpected error")
+
+class ImportData(BaseModel):
+    data: List[Dict]
+    table_name: str
+
+@app.post("/api/import_kpis")
+async def import_kpis(import_data: ImportData):
+    conn = None
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        
+        data = import_data.data
+        table_name = import_data.table_name
+
+        logger.info(f"Attempting to import {len(data)} rows into table '{table_name}'")
+
+        if not data:
+            raise HTTPException(status_code=400, detail="No data provided for import")
+
+        # Dynamically create or alter the table based on the first row of data
+        columns = list(data[0].keys())
+        create_table_query = f"""
+        CREATE TABLE IF NOT EXISTS {table_name} (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            {', '.join(f'"{col}" TEXT' for col in columns)}
+        )
+        """
+        cursor.execute(create_table_query)
+        logger.info(f"Table '{table_name}' created or already exists")
+
+        # Check for new columns and add them if necessary
+        existing_columns = [row[1] for row in cursor.execute(f"PRAGMA table_info({table_name})")]
+        for col in columns:
+            if col not in existing_columns:
+                cursor.execute(f'ALTER TABLE {table_name} ADD COLUMN "{col}" TEXT')
+                logger.info(f"Added new column '{col}' to table '{table_name}'")
+
+        # Prepare the insert query
+        insert_columns = ', '.join(f'"{col}"' for col in columns)
+        placeholders = ', '.join('?' for _ in columns)
+        insert_query = f'INSERT INTO {table_name} ({insert_columns}) VALUES ({placeholders})'
+
+        # Insert data
+        for row in data:
+            values = [row.get(col, None) for col in columns]
+            try:
+                cursor.execute(insert_query, values)
+            except sqlite3.Error as e:
+                logger.error(f"Error inserting row: {row}")
+                logger.error(f"SQLite error: {e}")
+                raise HTTPException(status_code=500, detail=f"Error inserting data: {str(e)}")
+
+        conn.commit()
+        return {"message": f"Successfully imported {len(data)} rows into table {table_name}"}
+    except sqlite3.Error as e:
+        logger.error(f"Database error: {e}")
+        raise HTTPException(status_code=500, detail=f"Database error: {str(e)}")
+    except Exception as e:
+        logger.error(f"Unexpected error: {e}")
+        raise HTTPException(status_code=500, detail=f"Unexpected error: {str(e)}")
+    finally:
+        if conn:
+            conn.close()
 
 if __name__ == "__main__":
     import uvicorn

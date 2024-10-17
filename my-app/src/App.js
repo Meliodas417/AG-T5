@@ -91,28 +91,22 @@ function App() {
     }, [fileUploaded, csvData, dbData]);
 
     // Handle file upload and sending data to the database
-    const handleFileUpload = (uploadedFileName, data, columns) => {
+    const handleFileUpload = (uploadedFileName, data, columns = null) => {
         setFileUploaded(true);
         setFileName(uploadedFileName);
         setCsvData(data);
         setCurrentData(data);
-        setColumnNames(columns);  // Add this line
+        setColumnNames(columns || Object.keys(data[0]));
         setIsJoinedData(uploadedFileName.startsWith("Joined_Data"));
-        setCurrentPage(1); // Reset to first page on new file upload
+        setCurrentPage(1);
 
         const tableName = uploadedFileName.replace(/\.[^/.]+$/, "");
         
-        // Remove this line to prevent calling handleTableCreated twice
-        // handleTableCreated(tableName);
-
         alasql(`DROP TABLE IF EXISTS ${tableName}`);
         alasql(`CREATE TABLE ${tableName} (${Object.keys(data[0]).map(col => `[${col}] STRING`).join(', ')})`);
         alasql(`INSERT INTO ${tableName} SELECT * FROM ?`, [data]);
 
         calculateCommonColumns();
-
-        // Remove the sendDataToServer call
-        // If you need to send data to the server in the future, you can add the logic here
     };
 
     const handleCommonColumnsChange = (columns) => {
@@ -185,10 +179,9 @@ function App() {
 
         // Get the original column order
         const originalHeaders = Object.keys(data[0]);
-        // Separate added columns
-        const addedHeaders = originalHeaders.filter(header => !columnNames.includes(header));
-        // Combine original and added headers in the correct order
-        const headers = [...columnNames, ...addedHeaders];
+        
+        // Use columnNames if available, otherwise use originalHeaders
+        const headers = columnNames && columnNames.length > 0 ? columnNames : originalHeaders;
 
         const startIndex = (currentPage - 1) * rowsPerPage;
         const pageData = data.slice(startIndex, startIndex + rowsPerPage);
@@ -244,7 +237,7 @@ function App() {
         try {
             // Construct the join query
             const joinQuery = tableNames.reduce((query, tableName, index) => {
-                const formattedTableName = `[${tableName}]`; // Ensure table names are properly formatted
+                const formattedTableName = `[${tableName}]`;
                 if (index === 0) {
                     return `SELECT * FROM ${formattedTableName}`;
                 } else {
@@ -264,9 +257,13 @@ function App() {
             alasql(`CREATE TABLE ${tempTableName}`);
             alasql(`SELECT * INTO ${tempTableName} FROM ?`, [result]);
 
+            // Update columnNames with the new joined data structure
+            const newColumnNames = Object.keys(result[0]);
+            setColumnNames(newColumnNames);
+
             // Simulate file upload with joined data
             const joinedFileName = "Joined_Data.csv";
-            handleFileUpload(joinedFileName, result);
+            handleFileUpload(joinedFileName, result, newColumnNames);
 
             console.log(`Joined data processed as new CSV: ${joinedFileName}`);
         } catch (error) {
