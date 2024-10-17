@@ -14,32 +14,55 @@ function App() {
     const [dbData, setDbData] = useState([]);
     const [currentPage, setCurrentPage] = useState(1);
     const [dataSource, setDataSource] = useState('csv');
-    const [tableNames, setTableNames] = useState([]); // New state to track table names
+    const [tableNames, setTableNames] = useState([]);
     const rowsPerPage = 10;
     const [joinedData, setJoinedData] = useState(null);
     const [commonColumns, setCommonColumns] = useState([]);
     const [currentData, setCurrentData] = useState([]);
     const [isJoinedData, setIsJoinedData] = useState(false);
+    const [columnNames, setColumnNames] = useState([]);
 
     // Function to handle when a new table is created
     const handleTableCreated = (tableName) => {
-        setTableNames((prevTableNames) => [...prevTableNames, tableName]);
+        setTableNames((prevTableNames) => {
+            if (!prevTableNames.includes(tableName)) {
+                return [...prevTableNames, tableName];
+            }
+            return prevTableNames;
+        });
     };
 
     // Function to fetch data from the database
     const fetchDataFromDatabase = async () => {
+        console.log('Attempting to fetch data from database...');
         try {
-            const response = await fetch('http://localhost:5000/api/kpis');
+            console.log('Sending request to http://localhost:8001/api/kpis');
+            const response = await fetch('http://localhost:8001/api/kpis', {
+                method: 'GET',
+                headers: {
+                    'Accept': 'application/json',
+                },
+            });
+            console.log('Response received:', response);
+            console.log('Response status:', response.status);
+            console.log('Response headers:', response.headers);
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
             const data = await response.json();
+            console.log('Fetched data:', data);
             setDbData(data);
             setFileUploaded(true);
 
             // Create an AlaSQL table and insert DB data
-            alasql('DROP TABLE IF EXISTS dbData'); // Ensure the table is dropped before creating
+            alasql('DROP TABLE IF EXISTS dbData');
             alasql('CREATE TABLE dbData');
             alasql('INSERT INTO dbData SELECT * FROM ?', [data]);
+            console.log('Data inserted into AlaSQL table');
         } catch (error) {
             console.error('Error fetching KPI data from database:', error);
+            console.error('Error details:', error.message);
+            // Optionally, set an error state here to display to the user
         }
     };
 
@@ -68,23 +91,24 @@ function App() {
     }, [fileUploaded, csvData, dbData]);
 
     // Handle file upload and sending data to the database
-    const handleFileUpload = (uploadedFileName, data) => {
+    const handleFileUpload = (uploadedFileName, data, columns) => {
         setFileUploaded(true);
         setFileName(uploadedFileName);
         setCsvData(data);
         setCurrentData(data);
+        setColumnNames(columns);  // Add this line
         setIsJoinedData(uploadedFileName.startsWith("Joined_Data"));
         setCurrentPage(1); // Reset to first page on new file upload
 
-        // Use the file name (without extension) as the table name
         const tableName = uploadedFileName.replace(/\.[^/.]+$/, "");
-        const columns = Object.keys(data[0]);
+        
+        // Remove this line to prevent calling handleTableCreated twice
+        // handleTableCreated(tableName);
 
         alasql(`DROP TABLE IF EXISTS ${tableName}`);
-        alasql(`CREATE TABLE ${tableName} (${columns.map(col => `[${col}] STRING`).join(', ')})`);
+        alasql(`CREATE TABLE ${tableName} (${Object.keys(data[0]).map(col => `[${col}] STRING`).join(', ')})`);
         alasql(`INSERT INTO ${tableName} SELECT * FROM ?`, [data]);
 
-        handleTableCreated(tableName);
         calculateCommonColumns();
 
         // Remove the sendDataToServer call
@@ -159,7 +183,13 @@ function App() {
 
         if (data.length === 0) return null;
 
-        const headers = Object.keys(data[0]);
+        // Get the original column order
+        const originalHeaders = Object.keys(data[0]);
+        // Separate added columns
+        const addedHeaders = originalHeaders.filter(header => !columnNames.includes(header));
+        // Combine original and added headers in the correct order
+        const headers = [...columnNames, ...addedHeaders];
+
         const startIndex = (currentPage - 1) * rowsPerPage;
         const pageData = data.slice(startIndex, startIndex + rowsPerPage);
 
@@ -283,9 +313,11 @@ function App() {
                     <KPIUploader
                         onFileUpload={handleFileUpload}
                         onClearData={handleClearDataInApp}
-                        onTableCreated={handleTableCreated} // Pass the new handler
-                        onCommonColumnsChange={handleCommonColumnsChange} // Add this line
-                        currentData={currentData} // Pass currentData as a prop
+                        onTableCreated={handleTableCreated}
+                        onCommonColumnsChange={handleCommonColumnsChange}
+                        currentData={currentData}
+                        columnNames={columnNames}
+                        setColumnNames={setColumnNames}
                     />
                 )}
 
