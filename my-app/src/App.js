@@ -21,6 +21,7 @@ function App() {
     const [currentData, setCurrentData] = useState([]);
     const [isJoinedData, setIsJoinedData] = useState(false);
     const [columnNames, setColumnNames] = useState([]);
+    const [isDataLoaded, setIsDataLoaded] = useState(false);
 
     // Function to handle when a new table is created
     const handleTableCreated = (tableName) => {
@@ -32,50 +33,83 @@ function App() {
         });
     };
 
-    // Function to fetch data from the database
-    const fetchDataFromDatabase = async () => {
+    // Modify the fetchDatabaseData function
+    const fetchDatabaseData = async () => {
         console.log('Attempting to fetch data from database...');
         try {
-            console.log('Sending request to http://localhost:8001/api/kpis');
-            const response = await fetch('http://localhost:8001/api/kpis', {
-                method: 'GET',
-                headers: {
-                    'Accept': 'application/json',
-                },
-            });
-            console.log('Response received:', response);
-            console.log('Response status:', response.status);
-            console.log('Response headers:', response.headers);
+            const response = await fetch('http://localhost:8001/api/kpis');
             if (!response.ok) {
                 throw new Error(`HTTP error! status: ${response.status}`);
             }
             const data = await response.json();
             console.log('Fetched data:', data);
             setDbData(data);
+            setCurrentData(data);
+            setColumnNames(Object.keys(data[0]));
             setFileUploaded(true);
-
-            // Create an AlaSQL table and insert DB data
-            alasql('DROP TABLE IF EXISTS dbData');
-            alasql('CREATE TABLE dbData');
-            alasql('INSERT INTO dbData SELECT * FROM ?', [data]);
-            console.log('Data inserted into AlaSQL table');
+            setFileName('DatabaseData');
+            setIsDataLoaded(true);
         } catch (error) {
             console.error('Error fetching KPI data from database:', error);
-            console.error('Error details:', error.message);
-            // Optionally, set an error state here to display to the user
+            alert('Error fetching data from database: ' + error.message);
         }
     };
 
-    // Effect to handle data source change
+    // Use effect to handle data loading and AlaSQL setup
     useEffect(() => {
-        if (dataSource === 'db') { // if user chooses database as data resource
-            fetchDataFromDatabase();
+        if (isDataLoaded && currentData.length > 0) {
+            createAlaSQLTable(currentData);
+            handleFileUpload('DatabaseData.csv', currentData, columnNames);
+        }
+    }, [isDataLoaded, currentData, columnNames]);
+
+    // New function to create AlaSQL table
+    const createAlaSQLTable = (data) => {
+        if (data && data.length > 0) {
+            const tableName = 'dbData';
+            try {
+                alasql('DROP TABLE IF EXISTS [dbData]');
+                const createTableQuery = `CREATE TABLE [${tableName}] (${Object.keys(data[0]).map(col => `[${col}] STRING`).join(', ')})`;
+                alasql(createTableQuery);
+                alasql(`INSERT INTO [${tableName}] SELECT * FROM ?`, [data]);
+                console.log('Data inserted into AlaSQL table');
+            } catch (e) {
+                console.error('Error in AlaSQL operations:', e);
+            }
+        }
+    };
+
+    // Modify the useEffect for data source change
+    useEffect(() => {
+        if (dataSource === 'db') {
+            fetchDatabaseData();
+        } else {
+            setIsDataLoaded(false);
+            setFileUploaded(false);
+            setFileName('');
+            setCurrentData([]);
+            setColumnNames([]);
         }
     }, [dataSource]);
+
+    // Modify handleFileUpload to not use AlaSQL directly
+    const handleFileUpload = (uploadedFileName, data, columns = null) => {
+        setFileUploaded(true);
+        setFileName(uploadedFileName);
+        setCsvData(data);
+        setCurrentData(data);
+        setColumnNames(columns || Object.keys(data[0]));
+        setIsJoinedData(uploadedFileName.startsWith("Joined_Data"));
+        setCurrentPage(1);
+    };
 
     // Example SQL operation: Join CSV and DB data
     const performJoinOperation = () => {
         try {
+            if (!alasql.tables.csvData || !alasql.tables.dbData) {
+                console.log('Tables not ready for join operation');
+                return;
+            }
             const result = alasql('SELECT csvData.*, dbData.department FROM csvData JOIN dbData ON csvData.id = dbData.id');
             console.log('Joined Data:', result);
         } catch (error) {
@@ -89,25 +123,6 @@ function App() {
             performJoinOperation();
         }
     }, [fileUploaded, csvData, dbData]);
-
-    // Handle file upload and sending data to the database
-    const handleFileUpload = (uploadedFileName, data, columns = null) => {
-        setFileUploaded(true);
-        setFileName(uploadedFileName);
-        setCsvData(data);
-        setCurrentData(data);
-        setColumnNames(columns || Object.keys(data[0]));
-        setIsJoinedData(uploadedFileName.startsWith("Joined_Data"));
-        setCurrentPage(1);
-
-        const tableName = uploadedFileName.replace(/\.[^/.]+$/, "");
-        
-        alasql(`DROP TABLE IF EXISTS ${tableName}`);
-        alasql(`CREATE TABLE ${tableName} (${Object.keys(data[0]).map(col => `[${col}] STRING`).join(', ')})`);
-        alasql(`INSERT INTO ${tableName} SELECT * FROM ?`, [data]);
-
-        calculateCommonColumns();
-    };
 
     const handleCommonColumnsChange = (columns) => {
         setCommonColumns(columns);
@@ -297,16 +312,30 @@ function App() {
         }
     };
 
+    const handleDataSourceChange = (e) => {
+        const newDataSource = e.target.value;
+        setDataSource(newDataSource);
+        if (newDataSource === 'db') {
+            fetchDatabaseData();
+        } else {
+            // Reset states for CSV option
+            setFileUploaded(false);
+            setFileName('');
+            setCurrentData([]);
+            setColumnNames([]);
+        }
+    };
+
     return (
         <div className="App">
             <div className="sidebar" style={{ width: '300px', position: 'fixed', left: 0, top: 0, bottom: 0, overflowY: 'auto' }}>
                 <label>Select Data Source:</label>
-                <select value={dataSource} onChange={(e) => setDataSource(e.target.value)}>
+                <select value={dataSource} onChange={handleDataSourceChange}>
                     <option value="csv">CSV File</option>
                     <option value="db">Database Table</option>
                 </select>
 
-                {dataSource === 'csv' && (
+                {(dataSource === 'csv' || (dataSource === 'db' && fileUploaded)) && (
                     <KPIUploader
                         onFileUpload={handleFileUpload}
                         onClearData={handleClearDataInApp}
@@ -315,6 +344,9 @@ function App() {
                         currentData={currentData}
                         columnNames={columnNames}
                         setColumnNames={setColumnNames}
+                        fileName={fileName}
+                        setFileName={setFileName}
+                        dataSource={dataSource}
                     />
                 )}
 
@@ -331,9 +363,10 @@ function App() {
             </div>
 
             <div className="content" style={{ marginLeft: '320px', padding: '20px' }}>
-                {!fileUploaded ? (
+                {!isDataLoaded ? (
                     <div className="card">
                         <h2>Welcome to the KPI Uploader!</h2>
+                        {dataSource === 'db' && <p>Loading data from database...</p>}
                     </div>
                 ) : (
                     <div className="card">

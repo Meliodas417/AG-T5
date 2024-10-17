@@ -3,20 +3,20 @@ import Papa from 'papaparse';
 import alasql from 'alasql';
 import './KPIUploader.css';
 
-function KPIUploader({ onFileUpload, onTableCreated, onCommonColumnsChange, currentData, columnNames, setColumnNames }) {
+function KPIUploader({ onFileUpload, onTableCreated, onCommonColumnsChange, currentData, columnNames, setColumnNames, fileName, setFileName, dataSource }) {
     const [csvData, setCsvData] = useState([]);
     const [expression, setExpression] = useState('');
-    const [fileName, setFileName] = useState('');
     const [addedColumns, setAddedColumns] = useState([]);
     const [savedColumns, setSavedColumns] = useState([]);
     const [fileUploaded, setFileUploaded] = useState(false);
 
-    // Initialize savedColumns with original columns when they are set
     useEffect(() => {
-        if (savedColumns.length === 0) {
+        if (dataSource === 'db' && currentData.length > 0) {
+            setFileUploaded(true);
+            setCsvData(currentData);
             setSavedColumns(columnNames);
         }
-    }, [columnNames]);
+    }, [dataSource, currentData, columnNames]);
 
     const calculateCommonColumns = () => {
         const allTables = Object.keys(alasql.tables);
@@ -24,7 +24,8 @@ function KPIUploader({ onFileUpload, onTableCreated, onCommonColumnsChange, curr
             let common = null;
 
             allTables.forEach((tableName, index) => {
-                const tableColumns = alasql(`SHOW COLUMNS FROM ${tableName}`).map(col => col.columnid);
+                const safeTableName = `"${tableName}"`;
+                const tableColumns = alasql(`SHOW COLUMNS FROM ${safeTableName}`).map(col => col.columnid);
                 console.log(`Columns in ${tableName}:`, tableColumns);
 
                 if (index === 0) {
@@ -65,18 +66,19 @@ function KPIUploader({ onFileUpload, onTableCreated, onCommonColumnsChange, curr
                     const columns = Object.keys(result.data[0]);
                     setCsvData(result.data);
                     setColumnNames(columns);
-                    setSavedColumns(columns); // Set all original columns as saved
+                    setSavedColumns(columns);
                     onFileUpload(file.name, result.data, columns);
 
-                    // Move this line here to ensure it's called only once
                     onTableCreated(newFileName);
 
-                    // Use the file name (without extension) as the table name
-                    alasql(`DROP TABLE IF EXISTS ${newFileName}`);
-                    alasql(`CREATE TABLE ${newFileName} (${columns.map(col => `[${col}] STRING`).join(', ')})`);
-                    alasql(`INSERT INTO ${newFileName} SELECT ${columns.map(col => `[${col}]`).join(', ')} FROM ?`, [result.data]);
+                    // Escape the table name
+                    const safeTableName = `"${newFileName}"`;
 
-                    // Calculate common columns after creating the new table
+                    // Use the escaped table name in SQL queries
+                    alasql(`DROP TABLE IF EXISTS ${safeTableName}`);
+                    alasql(`CREATE TABLE ${safeTableName} (${columns.map(col => `[${col}] STRING`).join(', ')})`);
+                    alasql(`INSERT INTO ${safeTableName} SELECT ${columns.map(col => `[${col}]`).join(', ')} FROM ?`, [result.data]);
+
                     calculateCommonColumns();
                 },
             });
@@ -251,11 +253,13 @@ function KPIUploader({ onFileUpload, onTableCreated, onCommonColumnsChange, curr
 
     return (
         <div>
-            <div className="file-upload">
-                <input type="file" accept=".csv" onChange={handleFileUpload} />
-            </div>
+            {dataSource === 'csv' && (
+                <div className="file-upload">
+                    <input type="file" accept=".csv" onChange={handleFileUpload} />
+                </div>
+            )}
 
-            {csvData.length > 0 && (
+            {fileUploaded && (
                 <>
                     <div className="column-selection">
                         <h3>Available Columns:</h3>
@@ -301,7 +305,7 @@ function KPIUploader({ onFileUpload, onTableCreated, onCommonColumnsChange, curr
 
                     <div>
                         <button onClick={handleExport}>Export CSV</button>
-                        <button onClick={handleImport}>Import to Database</button>
+                        <button onClick={handleImport}>Export to Database</button>
                     </div>
                 </>
             )}
