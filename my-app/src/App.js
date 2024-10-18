@@ -31,6 +31,7 @@ function App() {
             }
             return prevTableNames;
         });
+        calculateCommonColumns(); // Call this to update common columns
     };
 
     // Modify the fetchDatabaseData function

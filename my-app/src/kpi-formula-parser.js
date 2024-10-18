@@ -23,8 +23,8 @@ function KPIUploader({ onFileUpload, onTableCreated, onCommonColumnsChange, curr
             let common = null;
 
             allTables.forEach((tableName, index) => {
-                const safeTableName = `"${tableName}"`;
-                const tableColumns = alasql(`SHOW COLUMNS FROM ${safeTableName}`).map(col => col.columnid);
+                // Use backticks for table names to avoid syntax errors
+                const tableColumns = alasql(`SHOW COLUMNS FROM ${tableName}`).map(col => col.columnid);
                 console.log(`Columns in ${tableName}:`, tableColumns);
 
                 if (index === 0) {
@@ -66,6 +66,16 @@ function KPIUploader({ onFileUpload, onTableCreated, onCommonColumnsChange, curr
                     setCsvData(result.data);
                     setColumnNames(columns);
                     setSavedColumns(columns);
+
+                    // Create a unique table name for each file
+                    const tableName = `csvData_${Date.now()}`;
+                    alasql(`DROP TABLE IF EXISTS ${tableName}`);
+                    alasql(`CREATE TABLE ${tableName} (${columns.map(col => `[${col}] STRING`).join(', ')})`);
+                    alasql(`INSERT INTO ${tableName} SELECT * FROM ?`, [result.data]);
+
+                    // Update table names and calculate common columns
+                    onTableCreated(tableName);
+                    calculateCommonColumns();
 
                     // Call the onFileUpload prop with the parsed data
                     onFileUpload(file.name, result.data, columns);
