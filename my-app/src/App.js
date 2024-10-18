@@ -101,8 +101,8 @@ function App() {
         setColumnNames(columns || Object.keys(data[0]));
         setIsJoinedData(uploadedFileName.startsWith("Joined_Data"));
         setCurrentPage(1);
-        setIsDataLoaded(true);  // Add this line to indicate that data is loaded
-        createAlaSQLTable(data);  // Add this line to create the AlaSQL table
+        setIsDataLoaded(true);
+        createAlaSQLTable(data);
     };
 
     // Example SQL operation: Join CSV and DB data
@@ -153,34 +153,6 @@ function App() {
         };
     };
 
-    const generatePieChartData = () => {
-        const data = dataSource === 'csv' ? csvData : dbData;
-        if (!data || data.length === 0) {
-            console.log('No data available for generating pie chart');
-            return { labels: [], datasets: [] };
-        }
-
-        const labels = data.map((row) => row['Application_Type']);
-        const dataValues = data.map((row) => row['Resource_Allocation']);
-
-        return {
-            labels: labels,
-            datasets: [
-                {
-                    label: 'Resource Allocation by Application Type',
-                    data: dataValues,
-                    backgroundColor: [
-                        '#FF6666',
-                        '#99CCCC',
-                        '#99CC33',
-                        '#336699',
-                        '#FF9966',
-                        '#FFCCCC',
-                    ],
-                },
-            ],
-        };
-    };
 
     const chartOptions = {
         scales: {
@@ -199,53 +171,61 @@ function App() {
         },
     };
 
+    // Add this function before the renderTable function
+    const renderPagination = () => {
+        const totalPages = Math.ceil(currentData.length / rowsPerPage);
+        return (
+            <div className="pagination">
+                <button 
+                    onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+                    disabled={currentPage === 1}
+                >
+                    Previous
+                </button>
+                <span>{`Page ${currentPage} of ${totalPages}`}</span>
+                <button 
+                    onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+                    disabled={currentPage === totalPages}
+                >
+                    Next
+                </button>
+            </div>
+        );
+    };
+
     const renderTable = () => {
-        const data = isJoinedData ? currentData : (dataSource === 'csv' ? csvData : dbData);
+        const data = currentData;
 
         if (!data || data.length === 0) {
             console.log('No data available for rendering table');
             return null;
         }
 
-        // Get the original column order
-        const originalHeaders = Object.keys(data[0]);
-        
-        // Use columnNames if available, otherwise use originalHeaders
-        const headers = columnNames && columnNames.length > 0 ? columnNames : originalHeaders;
-
         const startIndex = (currentPage - 1) * rowsPerPage;
-        const pageData = data.slice(startIndex, startIndex + rowsPerPage);
+        const endIndex = startIndex + rowsPerPage;
+        const pageData = data.slice(startIndex, endIndex);
 
         return (
             <div>
-                <h3>{isJoinedData ? 'Joined Data Table' : 'Original Data Table'}</h3>
-                <table className="csv-table">
+                <table>
                     <thead>
                         <tr>
-                            {headers.map((header) => (
-                                <th key={header}>{header}</th>
+                            {columnNames.map((column) => (
+                                <th key={column}>{column}</th>
                             ))}
                         </tr>
                     </thead>
                     <tbody>
-                        {pageData.map((row, index) => (
-                            <tr key={index}>
-                                {headers.map((header) => (
-                                    <td key={header}>{row[header]}</td>
+                        {pageData.map((row, rowIndex) => (
+                            <tr key={rowIndex}>
+                                {columnNames.map((column) => (
+                                    <td key={column}>{row[column]}</td>
                                 ))}
                             </tr>
                         ))}
                     </tbody>
                 </table>
-                <div className="pagination">
-                    <button onClick={() => setCurrentPage(currentPage - 1)} disabled={currentPage === 1}>
-                        Previous
-                    </button>
-                    <span>Page {currentPage}</span>
-                    <button onClick={() => setCurrentPage(currentPage + 1)} disabled={startIndex + rowsPerPage >= data.length}>
-                        Next
-                    </button>
-                </div>
+                {renderPagination()}
             </div>
         );
     };
@@ -413,10 +393,6 @@ function App() {
 
                         <div className="Line_chart">
                             <Line data={generateChartData()} options={chartOptions} />
-                        </div>
-
-                        <div className="Doughnut_chart">
-                            <Doughnut data={generatePieChartData()} />
                         </div>
                     </div>
                 )}

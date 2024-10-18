@@ -11,12 +11,11 @@ function KPIUploader({ onFileUpload, onTableCreated, onCommonColumnsChange, curr
     const [fileUploaded, setFileUploaded] = useState(false);
 
     useEffect(() => {
-        if (dataSource === 'db' && currentData.length > 0) {
+        if (currentData.length > 0) {
             setFileUploaded(true);
-            setCsvData(currentData);
             setSavedColumns(columnNames);
         }
-    }, [dataSource, currentData, columnNames]);
+    }, [currentData, columnNames]);
 
     const calculateCommonColumns = () => {
         const allTables = Object.keys(alasql.tables);
@@ -80,7 +79,7 @@ function KPIUploader({ onFileUpload, onTableCreated, onCommonColumnsChange, curr
     };
 
     const handleExpression = () => {
-        if (!csvData) return;
+        if (!currentData || currentData.length === 0) return;
 
         const newColumnName = prompt("Enter a name for the new column:");
         if (!newColumnName) {
@@ -91,43 +90,33 @@ function KPIUploader({ onFileUpload, onTableCreated, onCommonColumnsChange, curr
         try {
             console.log("Column Names:", columnNames);
 
-            const updatedData = csvData.map((row) => {
+            const updatedData = currentData.map((row) => {
                 const evaluatedExpression = expression.replace(
                     /([a-zA-Z_][a-zA-Z0-9_]*)/g,
                     (match) => {
                         if (columnNames.includes(match)) {
                             const rawValue = row[match];
-                            console.log(`Raw value for ${match}:`, rawValue);
                             const value = parseFloat(rawValue);
-                            console.log(`Parsed value for ${match}:`, value);
-                            if (isNaN(value)) {
-                                console.warn(`Non-numeric data in column ${match}:`, row);
-                                return 'NaN';
-                            }
-                            return value;
+                            return isNaN(value) ? 'NaN' : value;
                         }
                         return match;
                     }
                 );
 
-                if (evaluatedExpression.includes('NaN')) {
-                    return row; // Return the original row without adding the new column
+                let newValue;
+                try {
+                    newValue = eval(evaluatedExpression);
+                } catch (error) {
+                    console.warn(`Error evaluating expression for row:`, row);
+                    newValue = NaN;
                 }
-
-                console.log(`Evaluating expression: ${evaluatedExpression}`);
-                const newValue = eval(evaluatedExpression);
                 
                 return {
                     ...row,
-                    [newColumnName]: newValue
+                    [newColumnName]: isNaN(newValue) ? 'NaN' : newValue
                 };
             });
 
-            setCsvData(updatedData);
-            setColumnNames(prevColumnNames => [...prevColumnNames, newColumnName]);
-            setAddedColumns(prevAddedColumns => [...prevAddedColumns, newColumnName]);
-            // This line is commented out, but double-check it's actually commented in your code
-            // setSavedColumns(prevSavedColumns => [...prevSavedColumns, newColumnName]);
             onFileUpload(fileName, updatedData, [...columnNames, newColumnName]);
         } catch (error) {
             console.error('Error in expression:', error.message);
@@ -210,7 +199,8 @@ function KPIUploader({ onFileUpload, onTableCreated, onCommonColumnsChange, curr
             return;
         }
 
-        const tableName = fileName.replace(/\.[^/.]+$/, "");
+        const defaultTableName = fileName.replace(/\.[^/.]+$/, "");
+        const tableName = prompt("Enter a name for the database table:", defaultTableName);
         if (!tableName) {
             alert('Invalid table name');
             return;
