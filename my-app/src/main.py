@@ -47,19 +47,31 @@ async def root():
     return {"message": "FastAPI server is running"}
 
 @app.get("/api/kpis")
-async def read_kpis():
+async def read_kpis(table: str):
     try:
+        # Sanitize the table name to prevent SQL injection
+        if not table.isidentifier():
+            raise HTTPException(status_code=400, detail="Invalid table name")
+
         conn = get_db_connection()
         cursor = conn.cursor()
-        cursor.execute('SELECT * FROM kpis')
+
+        # Check if the table exists
+        cursor.execute("SELECT name FROM sqlite_master WHERE type='table' AND name=?", (table,))
+        if not cursor.fetchone():
+            raise HTTPException(status_code=404, detail="Table not found")
+
+        # Use parameterized query to fetch data
+        query = f"SELECT * FROM {table}"
+        cursor.execute(query)
         kpis = cursor.fetchall()
         conn.close()
         return [dict(row) for row in kpis]
     except sqlite3.Error as e:
-        print(f"Database query error: {e}")
+        logger.error(f"Database query error: {e}")
         raise HTTPException(status_code=500, detail="Database query error")
     except Exception as e:
-        print(f"Unexpected error: {e}")
+        logger.error(f"Unexpected error: {e}")
         raise HTTPException(status_code=500, detail="Unexpected error")
 
 class ImportData(BaseModel):
@@ -125,6 +137,25 @@ async def import_kpis(import_data: ImportData):
     finally:
         if conn:
             conn.close()
+
+@app.get("/api/tables")
+async def list_tables():
+    logger.info("Received request to list tables")  # Log the request
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        cursor.execute("SELECT name FROM sqlite_master WHERE type='table';")
+        tables = cursor.fetchall()
+        conn.close()
+        table_names = [table['name'] for table in tables]
+        logger.info(f"Tables found: {table_names}")  # Log the tables found
+        return table_names
+    except sqlite3.Error as e:
+        logger.error(f"Database error: {e}")
+        raise HTTPException(status_code=500, detail="Database error")
+    except Exception as e:
+        logger.error(f"Unexpected error: {e}")
+        raise HTTPException(status_code=500, detail="Unexpected error")
 
 if __name__ == "__main__":
     import uvicorn

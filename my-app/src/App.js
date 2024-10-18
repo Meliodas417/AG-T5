@@ -22,6 +22,8 @@ function App() {
     const [isJoinedData, setIsJoinedData] = useState(false);
     const [columnNames, setColumnNames] = useState([]);
     const [isDataLoaded, setIsDataLoaded] = useState(false);
+    const [availableTables, setAvailableTables] = useState([]);
+    const [selectedTable, setSelectedTable] = useState('');
 
     // Function to handle when a new table is created
     const handleTableCreated = (tableName) => {
@@ -34,35 +36,59 @@ function App() {
         calculateCommonColumns(); // Call this to update common columns
     };
 
-    // Modify the fetchDatabaseData function
-    const fetchDatabaseData = async () => {
-        console.log('Attempting to fetch data from database...');
+    // Fetch available tables from the database
+    const fetchAvailableTables = async () => {
+        const url = 'http://localhost:8001/api/tables';
+        console.log(`Fetching tables from: ${url}`); // Log the request URL
         try {
-            const response = await fetch('http://localhost:8001/api/kpis');
+            const response = await fetch(url);
+            console.log(`Response status: ${response.status}`); // Log the response status
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            const tables = await response.json();
+            console.log('Fetched tables:', tables); // Log the fetched tables
+            setAvailableTables(tables);
+            if (tables.length > 0) {
+                setSelectedTable(tables[0]); // Set the first table as default
+            }
+        } catch (error) {
+            console.error('Error fetching tables:', error);
+            alert('Error fetching tables: ' + error.message);
+        }
+    };
+
+    // Fetch data from the selected table
+    const fetchTableData = async (tableName) => {
+        console.log(`Fetching data for table: ${tableName}`); // Log the table being fetched
+        try {
+            const response = await fetch(`http://localhost:8001/api/kpis?table=${tableName}`);
+            console.log(`Response status for table data: ${response.status}`); // Log the response status
             if (!response.ok) {
                 throw new Error(`HTTP error! status: ${response.status}`);
             }
             const data = await response.json();
-            console.log('Fetched data:', data);
+            console.log('Fetched data:', data); // Log the fetched data
             setDbData(data);
             setCurrentData(data);
             setColumnNames(Object.keys(data[0]));
             setFileUploaded(true);
-            setFileName('DatabaseData');
+            setFileName(tableName);
             setIsDataLoaded(true);
+            console.log('State updated with new data'); // Log state update
         } catch (error) {
-            console.error('Error fetching KPI data from database:', error);
-            alert('Error fetching data from database: ' + error.message);
+            console.error('Error fetching data from table:', error);
+            alert('Error fetching data from table: ' + error.message);
         }
     };
 
-    // Use effect to handle data loading and AlaSQL setup
+    // Use effect to fetch data from the selected table
     useEffect(() => {
-        if (isDataLoaded && currentData.length > 0) {
-            createAlaSQLTable(currentData);
-            handleFileUpload('DatabaseData.csv', currentData, columnNames);
+        if (dataSource === 'db' && selectedTable) {
+            console.log(`Fetching data for selected table: ${selectedTable}`); // Log the selected table
+            fetchTableData(selectedTable);
         }
-    }, [isDataLoaded, currentData, columnNames]);
+    }, [selectedTable, dataSource]);
 
     // New function to create AlaSQL table
     const createAlaSQLTable = (data) => {
@@ -83,7 +109,7 @@ function App() {
     // Modify the useEffect for data source change
     useEffect(() => {
         if (dataSource === 'db') {
-            fetchDatabaseData();
+            fetchAvailableTables();
         } else {
             setIsDataLoaded(false);
             setFileUploaded(false);
@@ -312,7 +338,7 @@ function App() {
         const newDataSource = e.target.value;
         setDataSource(newDataSource);
         if (newDataSource === 'db') {
-            fetchDatabaseData();
+            fetchAvailableTables(); // Use this instead of fetchDatabaseData
         } else {
             // Reset states for CSV option
             setFileUploaded(false);
@@ -320,6 +346,12 @@ function App() {
             setCurrentData([]);
             setColumnNames([]);
         }
+    };
+
+    const handleTableSelectionChange = (event) => {
+        const selectedTableName = event.target.value;
+        setSelectedTable(selectedTableName);
+        console.log(`Selected table: ${selectedTableName}`); // Log the selected table
     };
 
     return (
@@ -330,6 +362,17 @@ function App() {
                     <option value="csv">CSV File</option>
                     <option value="db">Database Table</option>
                 </select>
+
+                {dataSource === 'db' && availableTables.length > 0 && (
+                    <div>
+                        <label>Select Table:</label>
+                        <select value={selectedTable} onChange={handleTableSelectionChange}>
+                            {availableTables.map((table) => (
+                                <option key={table} value={table}>{table}</option>
+                            ))}
+                        </select>
+                    </div>
+                )}
 
                 {(dataSource === 'csv' || (dataSource === 'db' && fileUploaded)) && (
                     <KPIUploader
