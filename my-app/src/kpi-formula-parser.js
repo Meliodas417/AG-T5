@@ -1,16 +1,22 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Papa from 'papaparse';
 import alasql from 'alasql';
 import './KPIUploader.css';
 
-function KPIUploader({ onFileUpload, onTableCreated, onCommonColumnsChange, currentData }) {
+function KPIUploader({ onFileUpload, onTableCreated, onCommonColumnsChange, currentData, columnNames, setColumnNames, fileName, setFileName, dataSource }) {
     const [csvData, setCsvData] = useState([]);
-    const [columnNames, setColumnNames] = useState([]);
     const [expression, setExpression] = useState('');
-    const [fileName, setFileName] = useState('');
     const [addedColumns, setAddedColumns] = useState([]);
     const [savedColumns, setSavedColumns] = useState([]);
     const [fileUploaded, setFileUploaded] = useState(false);
+
+    useEffect(() => {
+        if (currentData.length > 0) {
+            setFileUploaded(true);
+            setSavedColumns(columnNames);
+            processData(fileName, currentData, columnNames);
+        }
+    }, [currentData, columnNames, fileName]);
 
     const calculateCommonColumns = () => {
         const allTables = Object.keys(alasql.tables);
@@ -18,7 +24,7 @@ function KPIUploader({ onFileUpload, onTableCreated, onCommonColumnsChange, curr
             let common = null;
 
             allTables.forEach((tableName, index) => {
-                const tableColumns = alasql(`SHOW COLUMNS FROM ${tableName}`).map(col => col.columnid);
+                const tableColumns = alasql(`SHOW COLUMNS FROM \`${tableName}\``).map(col => col.columnid);
                 console.log(`Columns in ${tableName}:`, tableColumns);
 
                 if (index === 0) {
@@ -37,20 +43,32 @@ function KPIUploader({ onFileUpload, onTableCreated, onCommonColumnsChange, curr
         }
     };
 
+    const processData = (tableName, data, columns) => {
+        setCsvData(data);
+        setColumnNames(columns);
+        setSavedColumns(columns);
+
+        const sanitizedTableName = tableName.replace(/\.[^/.]+$/, "").replace(/[^a-zA-Z0-9_]/g, "_");
+        alasql(`DROP TABLE IF EXISTS \`${sanitizedTableName}\``);
+        alasql(`CREATE TABLE \`${sanitizedTableName}\` (${columns.map(col => `\`${col}\` STRING`).join(', ')})`);
+        alasql(`INSERT INTO \`${sanitizedTableName}\` SELECT * FROM ?`, [data]);
+
+        onTableCreated(sanitizedTableName);
+        calculateCommonColumns();
+    };
+
     const handleFileUpload = (e) => {
         const file = e.target.files[0];
         if (file) {
-            const newFileName = file.name.replace(/\.[^/.]+$/, ""); // Use file name without extension
             setFileName(file.name);
             setCsvData([]);
-            setColumnNames([]);
             setExpression('');
             setAddedColumns([]);
             setSavedColumns([]);
             setFileUploaded(true);
 
             Papa.parse(file, {
-                header: true, // Ensure headers are parsed
+                header: true,
                 complete: (result) => {
                     if (result.data.length === 0) {
                         console.error('No data found in CSV file.');
@@ -58,20 +76,13 @@ function KPIUploader({ onFileUpload, onTableCreated, onCommonColumnsChange, curr
                     }
 
                     const columns = Object.keys(result.data[0]);
-                    setCsvData(result.data);
-                    setColumnNames(columns);
-                    onFileUpload(file.name, result.data);
-
-                    // Use the file name (without extension) as the table name
-                    alasql(`DROP TABLE IF EXISTS ${newFileName}`);
-                    alasql(`CREATE TABLE ${newFileName} (${columns.map(col => `[${col}] STRING`).join(', ')})`);
-                    alasql(`INSERT INTO ${newFileName} SELECT * FROM ?`, [result.data]);
-
-                    onTableCreated(newFileName);
-
-                    // Calculate common columns after creating the new table
-                    calculateCommonColumns();
+                    processData(file.name, result.data, columns);
+                    onFileUpload(file.name, result.data, columns);
                 },
+                error: (error) => {
+                    console.error('Error parsing CSV:', error);
+                    alert('Error parsing CSV file');
+                }
             });
         }
     };
@@ -86,7 +97,7 @@ function KPIUploader({ onFileUpload, onTableCreated, onCommonColumnsChange, curr
         }
 
         try {
-            console.log("Column Names:", columnNames);
+            console.log("Column Names before update:", columnNames);
 
             const updatedData = csvData.map((row) => {
                 const evaluatedExpression = expression.replace(
@@ -94,32 +105,26 @@ function KPIUploader({ onFileUpload, onTableCreated, onCommonColumnsChange, curr
                     (match) => {
                         if (columnNames.includes(match)) {
                             const rawValue = row[match];
-                            console.log(`Raw value for ${match}:`, rawValue);
                             const value = parseFloat(rawValue);
-                            console.log(`Parsed value for ${match}:`, value);
-                            if (isNaN(value)) {
-                                console.warn(`Skipping row due to non-numeric data in column ${match}:`, row);
-                                return 'NaN';
-                            }
-                            return value;
+                            return isNaN(value) ? 0 : value; // Use 0 for non-numeric values
                         }
                         return match;
                     }
                 );
 
-                if (evaluatedExpression.includes('NaN')) {
-                    return row;
-                }
-
-                console.log(`Evaluating expression: ${evaluatedExpression}`);
+                // Evaluate the expression safely
                 const newValue = eval(evaluatedExpression);
                 return { ...row, [newColumnName]: newValue };
             });
 
             setCsvData(updatedData);
             setColumnNames([...columnNames, newColumnName]);
-            setAddedColumns([...addedColumns, newColumnName]);
-            onFileUpload(fileName, updatedData);
+            setAddedColumns((prevAddedColumns) => {
+                const updatedAddedColumns = [...prevAddedColumns, newColumnName];
+                console.log("Updated Added Columns:", updatedAddedColumns);
+                return updatedAddedColumns;
+            });
+            onFileUpload(fileName, updatedData, [...columnNames, newColumnName]);
         } catch (error) {
             console.error('Error in expression:', error.message);
             alert('Error in expression: ' + error.message);
@@ -136,15 +141,17 @@ function KPIUploader({ onFileUpload, onTableCreated, onCommonColumnsChange, curr
         setAddedColumns(addedColumns.filter(column => column !== columnName));
         setColumnNames(columnNames.filter(column => column !== columnName));
         setSavedColumns(savedColumns.filter(column => column !== columnName));
-        onFileUpload(fileName, updatedData);
+        onFileUpload(fileName, updatedData, columnNames.filter(column => column !== columnName));
     };
 
     const handleToggleSaveColumn = (columnName) => {
-        if (savedColumns.includes(columnName)) {
-            setSavedColumns(savedColumns.filter(column => column !== columnName));
-        } else {
-            setSavedColumns([...savedColumns, columnName]);
-        }
+        setSavedColumns(prevSavedColumns => {
+            if (prevSavedColumns.includes(columnName)) {
+                return prevSavedColumns.filter(col => col !== columnName);
+            } else {
+                return [...prevSavedColumns, columnName];
+            }
+        });
     };
 
     const handleExport = () => {
@@ -156,7 +163,33 @@ function KPIUploader({ onFileUpload, onTableCreated, onCommonColumnsChange, curr
             return;
         }
 
-        const csvContent = Papa.unparse(currentData);
+        // Get the original columns and the explicitly saved new columns
+        const originalColumns = columnNames.filter(col => !addedColumns.includes(col));
+        const savedNewColumns = addedColumns.filter(col => savedColumns.includes(col));
+        const exportColumns = [...originalColumns, ...savedNewColumns];
+
+        // Filter and order the data based on exportColumns
+        const exportData = currentData
+            .map(row => {
+                const orderedRow = {};
+                exportColumns.forEach(col => {
+                    if (row.hasOwnProperty(col)) {
+                        orderedRow[col] = row[col];
+                    }
+                });
+                return orderedRow;
+            })
+            .filter(row => {
+                // Check if the row has any non-empty values in the original columns
+                return originalColumns.some(col => row[col] !== '' && row[col] !== null && row[col] !== undefined);
+            });
+
+        const csvContent = Papa.unparse(exportData, {
+            columns: exportColumns, // Specify the column order explicitly
+            header: true,
+            skipEmptyLines: true // This should help prevent extra empty lines
+        });
+
         const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
         const url = URL.createObjectURL(blob);
         const link = document.createElement('a');
@@ -167,13 +200,57 @@ function KPIUploader({ onFileUpload, onTableCreated, onCommonColumnsChange, curr
         document.body.removeChild(link);
     };
 
+    const handleImport = async () => {
+        if (!currentData || currentData.length === 0) {
+            alert('No data to import');
+            return;
+        }
+
+        const defaultTableName = fileName.replace(/\.[^/.]+$/, "");
+        const tableName = prompt("Enter a name for the database table:", defaultTableName);
+        if (!tableName) {
+            alert('Invalid table name');
+            return;
+        }
+
+        console.log('Data to be imported:', currentData);
+        console.log('Table name:', tableName);
+
+        try {
+            const response = await fetch('http://localhost:8001/api/import_kpis', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    data: currentData,
+                    table_name: tableName
+                }),
+            });
+
+            if (!response.ok) {
+                const errorData = await response.json();
+                console.error('Error response:', errorData);
+                throw new Error(`HTTP error! status: ${response.status}, message: ${JSON.stringify(errorData)}`);
+            }
+
+            const result = await response.json();
+            alert(result.message);
+        } catch (error) {
+            console.error('Error importing data:', error);
+            alert('Error importing data: ' + error.message);
+        }
+    };
+
     return (
         <div>
-            <div className="file-upload">
-                <input type="file" accept=".csv" onChange={handleFileUpload} />
-            </div>
+            {dataSource === 'csv' && (
+                <div className="file-upload">
+                    <input type="file" accept=".csv" onChange={handleFileUpload} />
+                </div>
+            )}
 
-            {csvData.length > 0 && (
+            {fileUploaded && (
                 <>
                     <div className="column-selection">
                         <h3>Available Columns:</h3>
@@ -219,6 +296,7 @@ function KPIUploader({ onFileUpload, onTableCreated, onCommonColumnsChange, curr
 
                     <div>
                         <button onClick={handleExport}>Export CSV</button>
+                        <button onClick={handleImport}>Export to Database</button>
                     </div>
                 </>
             )}
