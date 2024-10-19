@@ -60,22 +60,20 @@ function App() {
 
     // Fetch data from the selected table
     const fetchTableData = async (tableName) => {
-        console.log(`Fetching data for table: ${tableName}`); // Log the table being fetched
+        console.log(`Fetching data for table: ${tableName}`);
         try {
             const response = await fetch(`http://localhost:8001/api/kpis?table=${tableName}`);
-            console.log(`Response status for table data: ${response.status}`); // Log the response status
             if (!response.ok) {
                 throw new Error(`HTTP error! status: ${response.status}`);
             }
             const data = await response.json();
-            console.log('Fetched data:', data); // Log the fetched data
-            setDbData(data);
-            setCurrentData(data);
-            setColumnNames(Object.keys(data[0]));
-            setFileUploaded(true);
-            setFileName(tableName);
+            console.log('Fetched data:', data);
+            
+            // Use handleFileUpload to process the data as if it were a CSV
+            handleFileUpload(tableName, data, Object.keys(data[0]));
+            
             setIsDataLoaded(true);
-            console.log('State updated with new data'); // Log state update
+            console.log('State updated with new data');
         } catch (error) {
             console.error('Error fetching data from table:', error);
             alert('Error fetching data from table: ' + error.message);
@@ -119,7 +117,7 @@ function App() {
         }
     }, [dataSource]);
 
-    // Modify handleFileUpload to not use AlaSQL directly
+    // Modify handleFileUpload to accept data directly
     const handleFileUpload = (uploadedFileName, data, columns = null) => {
         setFileUploaded(true);
         setFileName(uploadedFileName);

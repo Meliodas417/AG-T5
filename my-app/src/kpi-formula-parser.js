@@ -14,8 +14,9 @@ function KPIUploader({ onFileUpload, onTableCreated, onCommonColumnsChange, curr
         if (currentData.length > 0) {
             setFileUploaded(true);
             setSavedColumns(columnNames);
+            processData(fileName, currentData, columnNames);
         }
-    }, [currentData, columnNames]);
+    }, [currentData, columnNames, fileName]);
 
     const calculateCommonColumns = () => {
         const allTables = Object.keys(alasql.tables);
@@ -23,8 +24,7 @@ function KPIUploader({ onFileUpload, onTableCreated, onCommonColumnsChange, curr
             let common = null;
 
             allTables.forEach((tableName, index) => {
-                // Use backticks for table names to avoid syntax errors
-                const tableColumns = alasql(`SHOW COLUMNS FROM ${tableName}`).map(col => col.columnid);
+                const tableColumns = alasql(`SHOW COLUMNS FROM \`${tableName}\``).map(col => col.columnid);
                 console.log(`Columns in ${tableName}:`, tableColumns);
 
                 if (index === 0) {
@@ -43,11 +43,23 @@ function KPIUploader({ onFileUpload, onTableCreated, onCommonColumnsChange, curr
         }
     };
 
+    const processData = (tableName, data, columns) => {
+        setCsvData(data);
+        setColumnNames(columns);
+        setSavedColumns(columns);
+
+        const sanitizedTableName = tableName.replace(/\.[^/.]+$/, "").replace(/[^a-zA-Z0-9_]/g, "_");
+        alasql(`DROP TABLE IF EXISTS \`${sanitizedTableName}\``);
+        alasql(`CREATE TABLE \`${sanitizedTableName}\` (${columns.map(col => `\`${col}\` STRING`).join(', ')})`);
+        alasql(`INSERT INTO \`${sanitizedTableName}\` SELECT * FROM ?`, [data]);
+
+        onTableCreated(sanitizedTableName);
+        calculateCommonColumns();
+    };
+
     const handleFileUpload = (e) => {
         const file = e.target.files[0];
         if (file) {
-            // Sanitize the file name by replacing non-alphanumeric characters with underscores
-            const sanitizedFileName = file.name.replace(/\.[^/.]+$/, "").replace(/[^a-zA-Z0-9_]/g, "_");
             setFileName(file.name);
             setCsvData([]);
             setExpression('');
@@ -64,21 +76,7 @@ function KPIUploader({ onFileUpload, onTableCreated, onCommonColumnsChange, curr
                     }
 
                     const columns = Object.keys(result.data[0]);
-                    setCsvData(result.data);
-                    setColumnNames(columns);
-                    setSavedColumns(columns);
-
-                    // Use the sanitized file name directly as the table name
-                    const tableName = `${sanitizedFileName}`;
-                    alasql(`DROP TABLE IF EXISTS \`${tableName}\``);
-                    alasql(`CREATE TABLE \`${tableName}\` (${columns.map(col => `\`${col}\` STRING`).join(', ')})`);
-                    alasql(`INSERT INTO \`${tableName}\` SELECT * FROM ?`, [result.data]);
-
-                    // Update table names and calculate common columns
-                    onTableCreated(tableName);
-                    calculateCommonColumns();
-
-                    // Call the onFileUpload prop with the parsed data
+                    processData(file.name, result.data, columns);
                     onFileUpload(file.name, result.data, columns);
                 },
                 error: (error) => {
