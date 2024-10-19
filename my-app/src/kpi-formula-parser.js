@@ -90,7 +90,7 @@ function KPIUploader({ onFileUpload, onTableCreated, onCommonColumnsChange, curr
     };
 
     const handleExpression = () => {
-        if (!currentData || currentData.length === 0) return;
+        if (!csvData) return;
 
         const newColumnName = prompt("Enter a name for the new column:");
         if (!newColumnName) {
@@ -99,35 +99,33 @@ function KPIUploader({ onFileUpload, onTableCreated, onCommonColumnsChange, curr
         }
 
         try {
-            console.log("Column Names:", columnNames);
+            console.log("Column Names before update:", columnNames);
 
-            const updatedData = currentData.map((row) => {
+            const updatedData = csvData.map((row) => {
                 const evaluatedExpression = expression.replace(
                     /([a-zA-Z_][a-zA-Z0-9_]*)/g,
                     (match) => {
                         if (columnNames.includes(match)) {
                             const rawValue = row[match];
                             const value = parseFloat(rawValue);
-                            return isNaN(value) ? 'NaN' : value;
+                            return isNaN(value) ? 0 : value; // Use 0 for non-numeric values
                         }
                         return match;
                     }
                 );
 
-                let newValue;
-                try {
-                    newValue = eval(evaluatedExpression);
-                } catch (error) {
-                    console.warn(`Error evaluating expression for row:`, row);
-                    newValue = NaN;
-                }
-                
-                return {
-                    ...row,
-                    [newColumnName]: isNaN(newValue) ? 'NaN' : newValue
-                };
+                // Evaluate the expression safely
+                const newValue = eval(evaluatedExpression);
+                return { ...row, [newColumnName]: newValue };
             });
 
+            setCsvData(updatedData);
+            setColumnNames([...columnNames, newColumnName]);
+            setAddedColumns((prevAddedColumns) => {
+                const updatedAddedColumns = [...prevAddedColumns, newColumnName];
+                console.log("Updated Added Columns:", updatedAddedColumns);
+                return updatedAddedColumns;
+            });
             onFileUpload(fileName, updatedData, [...columnNames, newColumnName]);
         } catch (error) {
             console.error('Error in expression:', error.message);
