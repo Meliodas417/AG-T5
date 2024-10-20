@@ -3,19 +3,28 @@
 ## 1. Environment Setup
 Before integrating the KPI Uploader, ensure that the following environment setup steps have been completed:
 
-Node.js and npm must be installed. You can check if these are installed by running:
+1. Node.js and npm must be installed. You can check if these are installed by running:
+   ```bash
+   node -v
+   npm -v
+   ```
+   If they are not installed, download and install from [nodejs.org](https://nodejs.org/).
 
-```bash
-node -v
-npm -v
-```
-If they are not installed, download and install from [nodejs.org](https://nodejs.org/).
+2. Python: Python (preferably 3.12 or later) is required for running the FastAPI server backend. Ensure Python is installed by running:
+   ```bash
+   python --version
+   ```
+   If Python is not installed, download it from [python.org](https://www.python.org/downloads/).
 
-React and the necessary libraries (e.g., Chart.js) must be installed. You can install them using npm:
+3. FastAPI: The backend API is powered by FastAPI. To install FastAPI and Uvicorn (the ASGI server), run:
+   ```bash
+   pip install fastapi uvicorn
+   ```
 
-```bash
-npm install
-```
+4. React: Ensure that React and the necessary libraries (e.g., Chart.js, alasql) are installed. You can install them using npm:
+   ```bash
+   npm install
+   ```
 
 ## 2. Install Required Dependencies
 Ensure that the following dependencies are installed:
@@ -23,11 +32,12 @@ Ensure that the following dependencies are installed:
 - `react-chartjs-2` for chart rendering
 - `chart.js` for chart creation
 - `papaparse` for csv parsing
+- `alasql` for SQL-like querying on the frontend
 
 If these libraries are not already installed in your project, install them by running:
 
 ```bash
-npm install react-chartjs-2 chart.js papaparse
+npm install react-chartjs-2 chart.js papaparse alasql
 ```
 
 ## 3. Project Structure
@@ -38,7 +48,9 @@ Here is the project structure for the KPI Uploader integration:
 │
 ├── /src
 │   ├── App.js               # Main application file
+│   ├── createDataBase.py     # Script to create and populate the SQLite database
 │   ├── kpi-formula-parser.js # CSV file parsing and expression handling
+│   ├── main.py               # FastAPI server for handling database operations
 │   ├── index.js             # Entry point for React
 │   ├── KPIUploader.css      # Stylesheet for KPI uploader component
 │   └── /assets              # Optional folder for any static assets like logos
@@ -51,72 +63,75 @@ Here is the project structure for the KPI Uploader integration:
 └── README.md                # Project documentation
 ```
 
-## 4. Database Setup
-To ensure that all team members can connect to the same database, follow these steps:
-1. Set up MySQL
-   - Ensure MySQL is installed on your local machine.
-   - Use the following credentials to connect to the database we have set up for the project:
+## 4. Database Setup (Switch from MySQL to SQLite)
+1. SQLite Setup: We have transitioned from MySQL to SQLite as the primary database for this project.
+   - SQLite database files will be automatically created by the `createDataBase.py` script.
+   - No separate database server is required for SQLite; it stores everything locally in a single `.db` file.
+
+2. Running the Database Setup Script:
+   - Before running the project, execute the `createDataBase.py` file to create and populate the database:
      ```
-     Database: kpi_database
-     Username: team5_user
-     Password: [to be shared separately]
-     Host: localhost
+     python src/createDataBase.py
      ```
-2. Import Database Schema
-   - The database schema can be found in the `kpi_database.sql` file (make sure to import this schema into your MySQL database if it is not already set up).
-   - Run the following command in your MySQL client to import it:
+   - This will create an SQLite database file called `database_sample_data.db` and populate it with sample KPI data.
+
+3. Updating FastAPI Server:
+   - Ensure you have FastAPI and Uvicorn installed. To start the FastAPI server, run:
      ```
-     mysql -u team5_user -p kpi_database < /path/to/kpi_database.sql
-     ```
-3. Update .env File
-   - Ensure your `.env` file contains the correct the correct database credentials. This file should not be pushed to the repository:
-     ```
-     DB_HOST=localhost
-     DB_USER=team5_user
-     DB_PASS=[your team5 password]
-     DB_NAME=kpi_database
-     ```
-4. Server Setup
-   - The server will read the credentials from the `.env` file, so make sure to pull the latest `server.js` file from the repo and run `npm install` to install necessary dependencies.
+     uvicorn src.main:app --reload --port 8001
+   - This will run the FastAPI server on port 8001, and it will handle API requests for fetching data from the SQLite database.
 
 
 ## 5. Running the Application
-To run the KPI Uploader in your local environment, execute the following commands:
+To run the React frontend and FastAPI backend:
+1. Running the Frontend (React):
+   - Start the React application by running:
+     ```
+     npm start
+     ```
+   - Ensure your React app is running on port `3000`. If there is a conflict, stop the conflicting process or adjust the port settings.
 
-```bash
-npm start
-```
+2. Running the Backend (FastAPI):
+   - Start the FastAPI server by running the following command in a separate terminal window:
+     ```
+     uvicorn src.main:app --reload --port 8001
+     ```
+   - Ensure the FastAPI server runs on port `8001` for proper communication with the React frontend.
+
 
 ## 6. File Upload and Chart Visualization
-The `App.js` component handles file uploading, CSV parsing, table rendering, and chart visualization.
+The frontend has been updated to support fetching data directly from the SQLite database:
+1. Fetching Available Tables:
+   - The `App.js` component now includes functionality to retrieve available tables from the SQLite database via the `/api/tables` endpoint.
 
-Once a CSV file is uploaded, the data is parsed using PapaParse, and the table and charts (Line chart and Doughnut chart) are displayed.
+2. Selecting a Table:
+   - The user can select a table from the available list, and the frontend will dynamically fetch data from the selected table.
 
-Make sure your CSV file contains the following required columns for full functionality:
-- `Timestamp`
-- `Signal_Strength`
-- `Application_Type`
-- `Resource_Allocation`
-  
-You can modify or extend these columns as needed in your CSV files.
+3. API Endpoints:
+   - Get Available Tables: `GET /api/tables`
+   - Fetch KPI Data: `GET /api/kpis?table=<table_name>`
+   - Import KPI Data: `POST /api/import_kpis`
 
-## 7. Pagination for CSV Table
-The application automatically paginates the CSV data, displaying 10 rows per page. You can adjust the number of rows per page by modifying the `rowsPerPage` constant in `App.js`.
 
-## 8. Adding Expressions
-The `kpi-formula-parser.js` file provides functionality for users to generate new columns by entering expressions based on the existing columns in the CSV data.
+## 7. File Upload and Chart Visualization
+The `App.js` component handles file uploading, CSV parsing, and chart visualization.
+- CSV File Upload: You can upload CSV files and visualize the data in both table and chart formats.
+- KPI Table Fetching: You can also select an existing table from the SQLite database and visualize the data.
+- Line Chart and Doughnut Chart: The data is visualized using two chart types, which can be customized in the `generateChartData` and `generatePieChartData` functions in `App.js`.
 
-Users can input mathematical expressions (e.g., `column1 + column2`) to calculate new values and add them as new columns to the dataset.
 
-New columns can be deleted using the delete button next to each added column.
+## 8. Database Integration and Export
+The application supports two types of data import/export:
+1. Export CSV to Database:
+   - The `kpi-formula-parser.js` file now supports exporting parsed CSV data to the SQLite database via the `/api/import_kpis` endpoint.
+2. SQL Join Operation:
+   - You can perform SQL-like joins using AlaSQL in the frontend. The application allows you to join data between CSV files and database tables dynamically.
 
-## 9. Customization
-If you need to customize the chart appearance or behavior, modify the `generateChartData` and `generatePieChartData` functions in `App.js`. You can also adjust chart options like axis labels in the `chartOptions` object.
 
-For additional styling, you can modify the `KPIUploader.css` file. You might want to:
-- Adjust the layout of charts.
-- Customize table styles.
-- Modify the pagination buttons.
+## 9. Further Steps and Customization
+- Adding New Charts: You can extend the application by adding more chart types. For example, the `react-chartjs-2` library supports bar charts, radar charts, and more.
+- Advanced SQL Features: If your use case requires complex SQL queries, you can extend the FastAPI backend to support more advanced queries or add filtering/sorting functionality on the frontend.
+
 
 ## 10. Development
 When you are ready to deploy the application, run:
@@ -124,17 +139,5 @@ When you are ready to deploy the application, run:
 ```bash
 npm run build
 ```
-
-This will create an optimized build of the app in the `/build` directory, which can then be deployed to any static site host (e.g., Netlify, Vercel, GitHub Pages).
-
-
-## 11. Further Steps
-If you need to extend the functionality:
-- Adding New Charts: You can add more chart types by following the example of the Line and Doughnut charts in `App.js`. The `react-chartjs-2` library supports various types like Bar, Pie, and Radar charts.
-- Advanced CSV Features: If your use case requires advanced data manipulation, consider implementing more complex formula parsing or additional features like filtering and sorting.
-
-
-
-
-
+This will generate the production-ready code in the `/build` directory, which can be hosted on static site platforms like Netlify, Vercel, or GitHub Pages.
 
