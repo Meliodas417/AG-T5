@@ -84,6 +84,7 @@ Here is the project structure for the KPI Uploader integration:
 
 ## 5. Running the Application
 To run the React frontend and FastAPI backend:
+
 1. Running the Frontend (React):
    - Start the React application by running:
      ```
@@ -101,6 +102,7 @@ To run the React frontend and FastAPI backend:
 
 ## 6. File Upload and Chart Visualization
 The frontend has been updated to support fetching data directly from the SQLite database:
+
 1. Fetching Available Tables:
    - The `App.js` component now includes functionality to retrieve available tables from the SQLite database via the `/api/tables` endpoint.
 
@@ -115,6 +117,7 @@ The frontend has been updated to support fetching data directly from the SQLite 
 
 ## 7. File Upload and Chart Visualization
 The `App.js` component handles file uploading, CSV parsing, and chart visualization.
+
 - CSV File Upload: You can upload CSV files and visualize the data in both table and chart formats.
 - KPI Table Fetching: You can also select an existing table from the SQLite database and visualize the data.
 - Line Chart and Doughnut Chart: The data is visualized using two chart types, which can be customized in the `generateChartData` and `generatePieChartData` functions in `App.js`.
@@ -122,6 +125,7 @@ The `App.js` component handles file uploading, CSV parsing, and chart visualizat
 
 ## 8. Database Integration and Export
 The application supports two types of data import/export:
+
 1. Export CSV to Database:
    - The `kpi-formula-parser.js` file now supports exporting parsed CSV data to the SQLite database via the `/api/import_kpis` endpoint.
 2. SQL Join Operation:
