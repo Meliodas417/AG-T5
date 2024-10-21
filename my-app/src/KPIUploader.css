@@ -4,6 +4,7 @@
     height: 100vh;
     font-family: 'Roboto', sans-serif;
     background-color: #f5f5f5;
+    overflow-x: hidden;
 }
 
 .sidebar {
@@ -150,6 +151,22 @@ button:hover {
     box-shadow: 0px 0px 8px #669933;
 }
 
+.delete-button {
+    padding: 8px 12px;
+    background-color: #99CC33; 
+    color: #FFFFFF; 
+    border: none;
+    font-size: 14px;
+    border-radius: 5px;
+    cursor: pointer;
+    margin-left: 10px;
+}
+
+.delete-button:hover {
+    background-color: #669933; 
+    box-shadow: 0px 0px 8px #669933;
+}
+
 .result {
     margin-top: 20px;
     font-size: 18px;
@@ -175,14 +192,42 @@ button:hover {
     margin-bottom: 20px;
 }
 
+.csv-table-container {
+    max-width: calc(100% - 320px);
+    overflow-x: auto; 
+    padding-bottom: 20px; 
+}
+
 .csv-table th, .csv-table td {
     border: 1px solid #ddd;
     padding: 8px;
+    text-align: left;
 }
 
 .csv-table th {
     background-color: #f2f2f2;
+    font-weight: bold;
+    position: sticky;
+    top: 0;
     text-align: left;
+}
+
+.csv-table td {
+    background-color: #fff;
+}
+
+.csv-table-container::-webkit-scrollbar {
+    height: 8px; 
+    background-color: #f5f5f5;
+}
+
+.csv-table-container::-webkit-scrollbar-thumb {
+    background-color: #ccc;
+    border-radius: 4px;
+}
+
+.csv-table-container::-webkit-scrollbar-thumb:hover {
+    background-color: #99CC33; 
 }
 
 .pagination {

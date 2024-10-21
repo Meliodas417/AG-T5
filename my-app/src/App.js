@@ -36,6 +36,14 @@ function App() {
         calculateCommonColumns(); // Call this to update common columns
     };
 
+    // Function to handle table removal
+    const handleRemoveTable = (tableName) => {
+        setTableNames((prevTableNames) => prevTableNames.filter(name => name !== tableName));
+
+        setCurrentData([]);
+        setColumnNames([]);
+    };
+
     // Fetch available tables from the database
     const fetchAvailableTables = async () => {
         const url = 'http://localhost:8001/api/tables';
@@ -231,8 +239,8 @@ function App() {
         const pageData = data.slice(startIndex, endIndex);
 
         return (
-            <div>
-                <table>
+            <div className="csv-table-container">
+                <table className="csv-table">
                     <thead>
                         <tr>
                             {columnNames.map((column) => (
@@ -313,7 +321,7 @@ function App() {
             let common = null;
 
             allTables.forEach((tableName, index) => {
-                const tableColumns = alasql(`SHOW COLUMNS FROM ${tableName}`).map(col => col.columnid);
+                const tableColumns = alasql(`SHOW COLUMNS FROM [${tableName}]`).map(col => col.columnid);
                 console.log(`Columns in ${tableName}:`, tableColumns);
 
                 if (index === 0) {
@@ -392,7 +400,15 @@ function App() {
                         <h3>Current Loaded Tables:</h3>
                         <ul>
                             {tableNames.map((name, index) => (
-                                <li key={index}>{name}</li>
+                                <li key={index}>
+                                    {name}
+                                    <button
+                                        onClick={() => handleRemoveTable(name)}
+                                        className="delete-button"
+                                    >
+                                        Remove
+                                    </button>
+                                </li>
                             ))}
                         </ul>
                     </div>
