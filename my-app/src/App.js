@@ -4,6 +4,7 @@ import KPIUploader from './kpi-formula-parser';
 import { Line, Doughnut } from 'react-chartjs-2';
 import { Chart, CategoryScale, LinearScale, PointElement, LineElement, Title, Tooltip, Legend, ArcElement } from 'chart.js';
 import alasql from 'alasql';
+import { Table } from '../node_modules/@mui/material/index';
 
 Chart.register(CategoryScale, LinearScale, PointElement, LineElement, Title, Tooltip, Legend, ArcElement);
 
@@ -43,6 +44,10 @@ function App() {
         setCurrentData([]);
         setColumnNames([]);
     };
+
+    const handleTableClick = (tableName) => {
+        fetchTableData(tableName);
+    }
 
     // Fetch available tables from the database
     const fetchAvailableTables = async () => {
@@ -401,7 +406,7 @@ function App() {
                         <ul>
                             {tableNames.map((name, index) => (
                                 <li key={index}>
-                                    {name}
+                                    <a href="#" onClick={() => handleTableClick(name)}>{name}</a>
                                     <button
                                         onClick={() => handleRemoveTable(name)}
                                         className="delete-button"
