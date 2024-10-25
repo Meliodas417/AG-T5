@@ -28,13 +28,16 @@ function App() {
 
     // Function to handle when a new table is created
     const handleTableCreated = (tableName) => {
+        console.log(`Attempting to add table: ${tableName}`);
         setTableNames((prevTableNames) => {
             if (!prevTableNames.includes(tableName)) {
+                console.log(`Adding new table: ${tableName}`);
                 return [...prevTableNames, tableName];
             }
+            console.log(`Table ${tableName} already exists, not adding`);
             return prevTableNames;
         });
-        calculateCommonColumns(); // Call this to update common columns
+        calculateCommonColumns();
     };
 
     // Function to handle table removal
@@ -135,7 +138,7 @@ function App() {
         setFileUploaded(true);
         setFileName(uploadedFileName);
         setCsvData(data);
-        setCurrentData(data);
+        setCurrentData(data);  // This should be the React state setter
         setColumnNames(columns || Object.keys(data[0]));
         setIsJoinedData(uploadedFileName.startsWith("Joined_Data"));
         setCurrentPage(1);
@@ -392,11 +395,15 @@ function App() {
                         onTableCreated={handleTableCreated}
                         onCommonColumnsChange={handleCommonColumnsChange}
                         currentData={currentData}
+                        setCurrentData={setCurrentData}  // Make sure this line is present
                         columnNames={columnNames}
                         setColumnNames={setColumnNames}
                         fileName={fileName}
                         setFileName={setFileName}
                         dataSource={dataSource}
+                        setIsJoinedData={setIsJoinedData}
+                        setCurrentPage={setCurrentPage}
+                        setIsDataLoaded={setIsDataLoaded}
                     />
                 )}
 
