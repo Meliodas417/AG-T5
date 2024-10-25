@@ -49,8 +49,14 @@ function App() {
     };
 
     const handleTableClick = (tableName) => {
-        fetchTableData(tableName);
-    }
+        if (alasql.tables[tableName]) {
+            const data = alasql(`SELECT * FROM [${tableName}]`);
+            setCurrentData(data);
+            setColumnNames(Object.keys(data[0] || {}));
+        } else {
+            fetchTableData(tableName);
+        }
+    };
 
     // Fetch available tables from the database
     const fetchAvailableTables = async () => {
@@ -105,15 +111,14 @@ function App() {
     }, [selectedTable, dataSource]);
 
     // New function to create AlaSQL table
-    const createAlaSQLTable = (data) => {
+    const createAlaSQLTable = (tableName, data) => {
         if (data && data.length > 0) {
-            const tableName = 'csvData';  // Change this to 'csvData' for CSV files
             try {
-                alasql('DROP TABLE IF EXISTS csvData');
-                const createTableQuery = `CREATE TABLE ${tableName} (${Object.keys(data[0]).map(col => `[${col}] STRING`).join(', ')})`;
+                alasql(`DROP TABLE IF EXISTS [${tableName}]`);
+                const createTableQuery = `CREATE TABLE [${tableName}] (${Object.keys(data[0]).map(col => `[${col}] STRING`).join(', ')})`;
                 alasql(createTableQuery);
-                alasql(`INSERT INTO ${tableName} SELECT * FROM ?`, [data]);
-                console.log('Data inserted into AlaSQL table');
+                alasql(`INSERT INTO [${tableName}] SELECT * FROM ?`, [data]);
+                console.log(`Data inserted into AlaSQL table: ${tableName}`);
             } catch (e) {
                 console.error('Error in AlaSQL operations:', e);
             }
@@ -138,12 +143,16 @@ function App() {
         setFileUploaded(true);
         setFileName(uploadedFileName);
         setCsvData(data);
-        setCurrentData(data);  // This should be the React state setter
+        setCurrentData(data);
         setColumnNames(columns || Object.keys(data[0]));
         setIsJoinedData(uploadedFileName.startsWith("Joined_Data"));
         setCurrentPage(1);
         setIsDataLoaded(true);
-        createAlaSQLTable(data);
+
+        // Create a unique table name for the file
+        const tableName = uploadedFileName.replace(/\.[^/.]+$/, "").replace(/[^a-zA-Z0-9_]/g, "_");
+        createAlaSQLTable(tableName, data);
+        handleTableCreated(tableName);
     };
 
     // Example SQL operation: Join CSV and DB data
