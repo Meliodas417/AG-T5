@@ -87,18 +87,20 @@ function KPIUploader({
         setCsvData(data);
         setCurrentData(data);
         setColumnNames(columns || Object.keys(data[0] || {}));
-        setIsJoinedData(uploadedFileName.startsWith("Joined_Data"));
+        setIsJoinedData(uploadedFileName === "Joined_Data");
         setCurrentPage(1);
         setIsDataLoaded(true);
 
-        // Sanitize the table name
-        const sanitizedTableName = uploadedFileName.replace(/\.[^/.]+$/, "").replace(/[^a-zA-Z0-9_]/g, "_");
+        // Use the uploadedFileName as is for "Joined_Data", otherwise sanitize
+        const tableName = uploadedFileName === "Joined_Data" 
+            ? uploadedFileName 
+            : uploadedFileName.replace(/\.[^/.]+$/, "").replace(/[^a-zA-Z0-9_]/g, "_");
 
-        // Create the AlaSQL table with the sanitized name
-        createAlaSQLTable(sanitizedTableName, data);
+        // Create or update the AlaSQL table
+        createAlaSQLTable(tableName, data);
 
-        // Notify that a new table has been created, using the sanitized name
-        onTableCreated(sanitizedTableName);
+        // Notify that a new table has been created
+        onTableCreated(tableName);
     };
 
     const handleExpression = () => {

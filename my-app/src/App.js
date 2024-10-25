@@ -61,19 +61,20 @@ function App() {
     // Fetch available tables from the database
     const fetchAvailableTables = async () => {
         const url = 'http://localhost:8001/api/tables';
-        console.log(`Fetching tables from: ${url}`); // Log the request URL
+        console.log(`Fetching tables from: ${url}`);
         try {
             const response = await fetch(url);
-            console.log(`Response status: ${response.status}`); // Log the response status
+            console.log(`Response status: ${response.status}`);
             if (!response.ok) {
                 throw new Error(`HTTP error! status: ${response.status}`);
             }
             const tables = await response.json();
-            console.log('Fetched tables:', tables); // Log the fetched tables
+            console.log('Fetched tables:', tables);
             setAvailableTables(tables);
-            if (tables.length > 0) {
-                setSelectedTable(tables[0]); // Set the first table as default
-            }
+            // Remove this line:
+            // if (tables.length > 0) {
+            //     setSelectedTable(tables[0]);
+            // }
         } catch (error) {
             console.error('Error fetching tables:', error);
             alert('Error fetching tables: ' + error.message);
@@ -105,7 +106,7 @@ function App() {
     // Use effect to fetch data from the selected table
     useEffect(() => {
         if (dataSource === 'db' && selectedTable) {
-            console.log(`Fetching data for selected table: ${selectedTable}`); // Log the selected table
+            console.log(`Fetching data for selected table: ${selectedTable}`);
             fetchTableData(selectedTable);
         }
     }, [selectedTable, dataSource]);
@@ -312,20 +313,22 @@ function App() {
 
             console.log(`Joined result: ${result.length} rows`);
 
-            const tempTableName = 'temp_joined_table';
-            alasql(`DROP TABLE IF EXISTS ${tempTableName}`);
-            alasql(`CREATE TABLE ${tempTableName}`);
-            alasql(`SELECT * INTO ${tempTableName} FROM ?`, [result]);
+            // Use "Joined_Data" as the table name
+            const joinedTableName = "Joined_Data";
+            
+            // Create the AlaSQL table for joined data
+            alasql(`DROP TABLE IF EXISTS [${joinedTableName}]`);
+            alasql(`CREATE TABLE [${joinedTableName}]`);
+            alasql(`SELECT * INTO [${joinedTableName}] FROM ?`, [result]);
 
             // Update columnNames with the new joined data structure
             const newColumnNames = Object.keys(result[0]);
             setColumnNames(newColumnNames);
 
             // Simulate file upload with joined data
-            const joinedFileName = "Joined_Data.csv";
-            handleFileUpload(joinedFileName, result, newColumnNames);
+            handleFileUpload(joinedTableName, result, newColumnNames);
 
-            console.log(`Joined data processed as new CSV: ${joinedFileName}`);
+            console.log(`Joined data processed as new table: ${joinedTableName}`);
         } catch (error) {
             console.error('Error performing join operation:', error);
             alert(`Error performing join: ${error.message}`);
@@ -361,13 +364,16 @@ function App() {
         const newDataSource = e.target.value;
         setDataSource(newDataSource);
         if (newDataSource === 'db') {
-            fetchAvailableTables(); // Use this instead of fetchDatabaseData
+            fetchAvailableTables();
+            setSelectedTable(''); // Reset selected table
         } else {
             // Reset states for CSV option
             setFileUploaded(false);
             setFileName('');
             setCurrentData([]);
             setColumnNames([]);
+            setAvailableTables([]); // Clear available tables
+            setSelectedTable(''); // Reset selected table
         }
     };
 
@@ -390,6 +396,7 @@ function App() {
                     <div>
                         <label>Select Table:</label>
                         <select value={selectedTable} onChange={handleTableSelectionChange}>
+                            <option value="">Select a table</option>
                             {availableTables.map((table) => (
                                 <option key={table} value={table}>{table}</option>
                             ))}
