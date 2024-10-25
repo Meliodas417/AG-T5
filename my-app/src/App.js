@@ -53,6 +53,9 @@ function App() {
             const data = alasql(`SELECT * FROM [${tableName}]`);
             setCurrentData(data);
             setColumnNames(Object.keys(data[0] || {}));
+            setIsJoinedData(tableName === "Joined_Data");
+            setFileName(tableName);
+            setCurrentPage(1);
         } else {
             fetchTableData(tableName);
         }
@@ -296,20 +299,20 @@ function App() {
         }
 
         try {
-            // Construct the join query
+            // Construct the join query using FULL OUTER JOIN
             const joinQuery = tableNames.reduce((query, tableName, index) => {
                 const formattedTableName = `[${tableName}]`;
                 if (index === 0) {
                     return `SELECT * FROM ${formattedTableName}`;
                 } else {
-                    return `${query} INNER JOIN ${formattedTableName} ON ${tableNames[0]}.${commonColumn} = ${tableName}.${commonColumn}`;
+                    return `${query} FULL OUTER JOIN ${formattedTableName} ON ${tableNames[0]}.${commonColumn} = ${tableName}.${commonColumn}`;
                 }
             }, '');
 
             console.log("Join Query:", joinQuery);
 
             // Execute the join query
-            const result = alasql(`SELECT DISTINCT * FROM (${joinQuery})`);
+            const result = alasql(joinQuery);
 
             console.log(`Joined result: ${result.length} rows`);
 
@@ -325,8 +328,20 @@ function App() {
             const newColumnNames = Object.keys(result[0]);
             setColumnNames(newColumnNames);
 
-            // Simulate file upload with joined data
-            handleFileUpload(joinedTableName, result, newColumnNames);
+            // Update the current data with the joined result
+            setCurrentData(result);
+
+            // Set the current file name to Joined_Data
+            setFileName(joinedTableName);
+
+            // Set isJoinedData to true
+            setIsJoinedData(true);
+
+            // Notify that a new table has been created
+            handleTableCreated(joinedTableName);
+
+            // Set the current page to 1
+            setCurrentPage(1);
 
             console.log(`Joined data processed as new table: ${joinedTableName}`);
         } catch (error) {
