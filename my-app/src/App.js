@@ -4,6 +4,7 @@ import KPIUploader from './kpi-formula-parser';
 import { Line, Doughnut } from 'react-chartjs-2';
 import { Chart, CategoryScale, LinearScale, PointElement, LineElement, Title, Tooltip, Legend, ArcElement } from 'chart.js';
 import alasql from 'alasql';
+import { Table } from '../node_modules/@mui/material/index';
 
 Chart.register(CategoryScale, LinearScale, PointElement, LineElement, Title, Tooltip, Legend, ArcElement);
 
@@ -27,31 +28,56 @@ function App() {
 
     // Function to handle when a new table is created
     const handleTableCreated = (tableName) => {
+        console.log(`Attempting to add table: ${tableName}`);
         setTableNames((prevTableNames) => {
             if (!prevTableNames.includes(tableName)) {
+                console.log(`Adding new table: ${tableName}`);
                 return [...prevTableNames, tableName];
             }
+            console.log(`Table ${tableName} already exists, not adding`);
             return prevTableNames;
         });
-        calculateCommonColumns(); // Call this to update common columns
+        calculateCommonColumns();
+    };
+
+    // Function to handle table removal
+    const handleRemoveTable = (tableName) => {
+        setTableNames((prevTableNames) => prevTableNames.filter(name => name !== tableName));
+
+        setCurrentData([]);
+        setColumnNames([]);
+    };
+
+    const handleTableClick = (tableName) => {
+        if (alasql.tables[tableName]) {
+            const data = alasql(`SELECT * FROM [${tableName}]`);
+            setCurrentData(data);
+            setColumnNames(Object.keys(data[0] || {}));
+            setIsJoinedData(tableName === "Joined_Data");
+            setFileName(tableName);
+            setCurrentPage(1);
+        } else {
+            fetchTableData(tableName);
+        }
     };
 
     // Fetch available tables from the database
     const fetchAvailableTables = async () => {
         const url = 'http://localhost:8001/api/tables';
-        console.log(`Fetching tables from: ${url}`); // Log the request URL
+        console.log(`Fetching tables from: ${url}`);
         try {
             const response = await fetch(url);
-            console.log(`Response status: ${response.status}`); // Log the response status
+            console.log(`Response status: ${response.status}`);
             if (!response.ok) {
                 throw new Error(`HTTP error! status: ${response.status}`);
             }
             const tables = await response.json();
-            console.log('Fetched tables:', tables); // Log the fetched tables
+            console.log('Fetched tables:', tables);
             setAvailableTables(tables);
-            if (tables.length > 0) {
-                setSelectedTable(tables[0]); // Set the first table as default
-            }
+            // Remove this line:
+            // if (tables.length > 0) {
+            //     setSelectedTable(tables[0]);
+            // }
         } catch (error) {
             console.error('Error fetching tables:', error);
             alert('Error fetching tables: ' + error.message);
@@ -83,21 +109,20 @@ function App() {
     // Use effect to fetch data from the selected table
     useEffect(() => {
         if (dataSource === 'db' && selectedTable) {
-            console.log(`Fetching data for selected table: ${selectedTable}`); // Log the selected table
+            console.log(`Fetching data for selected table: ${selectedTable}`);
             fetchTableData(selectedTable);
         }
     }, [selectedTable, dataSource]);
 
     // New function to create AlaSQL table
-    const createAlaSQLTable = (data) => {
+    const createAlaSQLTable = (tableName, data) => {
         if (data && data.length > 0) {
-            const tableName = 'csvData';  // Change this to 'csvData' for CSV files
             try {
-                alasql('DROP TABLE IF EXISTS csvData');
-                const createTableQuery = `CREATE TABLE ${tableName} (${Object.keys(data[0]).map(col => `[${col}] STRING`).join(', ')})`;
+                alasql(`DROP TABLE IF EXISTS [${tableName}]`);
+                const createTableQuery = `CREATE TABLE [${tableName}] (${Object.keys(data[0]).map(col => `[${col}] STRING`).join(', ')})`;
                 alasql(createTableQuery);
-                alasql(`INSERT INTO ${tableName} SELECT * FROM ?`, [data]);
-                console.log('Data inserted into AlaSQL table');
+                alasql(`INSERT INTO [${tableName}] SELECT * FROM ?`, [data]);
+                console.log(`Data inserted into AlaSQL table: ${tableName}`);
             } catch (e) {
                 console.error('Error in AlaSQL operations:', e);
             }
@@ -127,7 +152,11 @@ function App() {
         setIsJoinedData(uploadedFileName.startsWith("Joined_Data"));
         setCurrentPage(1);
         setIsDataLoaded(true);
-        createAlaSQLTable(data);
+
+        // Create a unique table name for the file
+        const tableName = uploadedFileName.replace(/\.[^/.]+$/, "").replace(/[^a-zA-Z0-9_]/g, "_");
+        createAlaSQLTable(tableName, data);
+        handleTableCreated(tableName);
     };
 
     // Example SQL operation: Join CSV and DB data
@@ -231,8 +260,8 @@ function App() {
         const pageData = data.slice(startIndex, endIndex);
 
         return (
-            <div>
-                <table>
+            <div className="csv-table-container">
+                <table className="csv-table">
                     <thead>
                         <tr>
                             {columnNames.map((column) => (
@@ -270,37 +299,51 @@ function App() {
         }
 
         try {
-            // Construct the join query
+            // Construct the join query using FULL OUTER JOIN
             const joinQuery = tableNames.reduce((query, tableName, index) => {
                 const formattedTableName = `[${tableName}]`;
                 if (index === 0) {
                     return `SELECT * FROM ${formattedTableName}`;
                 } else {
-                    return `${query} INNER JOIN ${formattedTableName} ON ${tableNames[0]}.${commonColumn} = ${tableName}.${commonColumn}`;
+                    return `${query} FULL OUTER JOIN ${formattedTableName} ON ${tableNames[0]}.${commonColumn} = ${tableName}.${commonColumn}`;
                 }
             }, '');
 
             console.log("Join Query:", joinQuery);
 
             // Execute the join query
-            const result = alasql(`SELECT DISTINCT * FROM (${joinQuery})`);
+            const result = alasql(joinQuery);
 
             console.log(`Joined result: ${result.length} rows`);
 
-            const tempTableName = 'temp_joined_table';
-            alasql(`DROP TABLE IF EXISTS ${tempTableName}`);
-            alasql(`CREATE TABLE ${tempTableName}`);
-            alasql(`SELECT * INTO ${tempTableName} FROM ?`, [result]);
+            // Use "Joined_Data" as the table name
+            const joinedTableName = "Joined_Data";
+            
+            // Create the AlaSQL table for joined data
+            alasql(`DROP TABLE IF EXISTS [${joinedTableName}]`);
+            alasql(`CREATE TABLE [${joinedTableName}]`);
+            alasql(`SELECT * INTO [${joinedTableName}] FROM ?`, [result]);
 
             // Update columnNames with the new joined data structure
             const newColumnNames = Object.keys(result[0]);
             setColumnNames(newColumnNames);
 
-            // Simulate file upload with joined data
-            const joinedFileName = "Joined_Data.csv";
-            handleFileUpload(joinedFileName, result, newColumnNames);
+            // Update the current data with the joined result
+            setCurrentData(result);
 
-            console.log(`Joined data processed as new CSV: ${joinedFileName}`);
+            // Set the current file name to Joined_Data
+            setFileName(joinedTableName);
+
+            // Set isJoinedData to true
+            setIsJoinedData(true);
+
+            // Notify that a new table has been created
+            handleTableCreated(joinedTableName);
+
+            // Set the current page to 1
+            setCurrentPage(1);
+
+            console.log(`Joined data processed as new table: ${joinedTableName}`);
         } catch (error) {
             console.error('Error performing join operation:', error);
             alert(`Error performing join: ${error.message}`);
@@ -313,7 +356,7 @@ function App() {
             let common = null;
 
             allTables.forEach((tableName, index) => {
-                const tableColumns = alasql(`SHOW COLUMNS FROM ${tableName}`).map(col => col.columnid);
+                const tableColumns = alasql(`SHOW COLUMNS FROM [${tableName}]`).map(col => col.columnid);
                 console.log(`Columns in ${tableName}:`, tableColumns);
 
                 if (index === 0) {
@@ -336,13 +379,16 @@ function App() {
         const newDataSource = e.target.value;
         setDataSource(newDataSource);
         if (newDataSource === 'db') {
-            fetchAvailableTables(); // Use this instead of fetchDatabaseData
+            fetchAvailableTables();
+            setSelectedTable(''); // Reset selected table
         } else {
             // Reset states for CSV option
             setFileUploaded(false);
             setFileName('');
             setCurrentData([]);
             setColumnNames([]);
+            setAvailableTables([]); // Clear available tables
+            setSelectedTable(''); // Reset selected table
         }
     };
 
@@ -365,6 +411,7 @@ function App() {
                     <div>
                         <label>Select Table:</label>
                         <select value={selectedTable} onChange={handleTableSelectionChange}>
+                            <option value="">Select a table</option>
                             {availableTables.map((table) => (
                                 <option key={table} value={table}>{table}</option>
                             ))}
@@ -379,11 +426,15 @@ function App() {
                         onTableCreated={handleTableCreated}
                         onCommonColumnsChange={handleCommonColumnsChange}
                         currentData={currentData}
+                        setCurrentData={setCurrentData}  // Make sure this line is present
                         columnNames={columnNames}
                         setColumnNames={setColumnNames}
                         fileName={fileName}
                         setFileName={setFileName}
                         dataSource={dataSource}
+                        setIsJoinedData={setIsJoinedData}
+                        setCurrentPage={setCurrentPage}
+                        setIsDataLoaded={setIsDataLoaded}
                     />
                 )}
 
@@ -392,7 +443,15 @@ function App() {
                         <h3>Current Loaded Tables:</h3>
                         <ul>
                             {tableNames.map((name, index) => (
-                                <li key={index}>{name}</li>
+                                <li key={index}>
+                                    <a href="#" onClick={() => handleTableClick(name)}>{name}</a>
+                                    <button
+                                        onClick={() => handleRemoveTable(name)}
+                                        className="delete-button"
+                                    >
+                                        Remove
+                                    </button>
+                                </li>
                             ))}
                         </ul>
                     </div>

@@ -3,7 +3,21 @@ import Papa from 'papaparse';
 import alasql from 'alasql';
 import './KPIUploader.css';
 
-function KPIUploader({ onFileUpload, onTableCreated, onCommonColumnsChange, currentData, columnNames, setColumnNames, fileName, setFileName, dataSource }) {
+function KPIUploader({ 
+    onFileUpload, 
+    onTableCreated, 
+    onCommonColumnsChange, 
+    currentData, 
+    setCurrentData,  // Make sure this is included
+    columnNames, 
+    setColumnNames, 
+    fileName, 
+    setFileName, 
+    dataSource, 
+    setIsJoinedData,
+    setCurrentPage,
+    setIsDataLoaded
+}) {
     const [csvData, setCsvData] = useState([]);
     const [expression, setExpression] = useState('');
     const [addedColumns, setAddedColumns] = useState([]);
@@ -11,7 +25,7 @@ function KPIUploader({ onFileUpload, onTableCreated, onCommonColumnsChange, curr
     const [fileUploaded, setFileUploaded] = useState(false);
 
     useEffect(() => {
-        if (currentData.length > 0) {
+        if (currentData && currentData.length > 0 && columnNames && columnNames.length > 0) {
             setFileUploaded(true);
             setSavedColumns(columnNames);
             processData(fileName, currentData, columnNames);
@@ -44,6 +58,11 @@ function KPIUploader({ onFileUpload, onTableCreated, onCommonColumnsChange, curr
     };
 
     const processData = (tableName, data, columns) => {
+        if (!data || data.length === 0 || !columns || columns.length === 0) {
+            console.error('Invalid data or columns in processData');
+            return;
+        }
+
         setCsvData(data);
         setColumnNames(columns);
         setSavedColumns(columns);
@@ -57,34 +76,31 @@ function KPIUploader({ onFileUpload, onTableCreated, onCommonColumnsChange, curr
         calculateCommonColumns();
     };
 
-    const handleFileUpload = (e) => {
-        const file = e.target.files[0];
-        if (file) {
-            setFileName(file.name);
-            setCsvData([]);
-            setExpression('');
-            setAddedColumns([]);
-            setSavedColumns([]);
-            setFileUploaded(true);
-
-            Papa.parse(file, {
-                header: true,
-                complete: (result) => {
-                    if (result.data.length === 0) {
-                        console.error('No data found in CSV file.');
-                        return;
-                    }
-
-                    const columns = Object.keys(result.data[0]);
-                    processData(file.name, result.data, columns);
-                    onFileUpload(file.name, result.data, columns);
-                },
-                error: (error) => {
-                    console.error('Error parsing CSV:', error);
-                    alert('Error parsing CSV file');
-                }
-            });
+    const handleFileUpload = (uploadedFileName, data, columns = null) => {
+        if (!data || data.length === 0) {
+            console.error('No data to upload');
+            return;
         }
+
+        setFileUploaded(true);
+        setFileName(uploadedFileName);
+        setCsvData(data);
+        setCurrentData(data);
+        setColumnNames(columns || Object.keys(data[0] || {}));
+        setIsJoinedData(uploadedFileName === "Joined_Data");
+        setCurrentPage(1);
+        setIsDataLoaded(true);
+
+        // Use the uploadedFileName as is for "Joined_Data", otherwise sanitize
+        const tableName = uploadedFileName === "Joined_Data" 
+            ? uploadedFileName 
+            : uploadedFileName.replace(/\.[^/.]+$/, "").replace(/[^a-zA-Z0-9_]/g, "_");
+
+        // Create or update the AlaSQL table
+        createAlaSQLTable(tableName, data);
+
+        // Notify that a new table has been created
+        onTableCreated(tableName);
     };
 
     const handleExpression = () => {
@@ -242,11 +258,78 @@ function KPIUploader({ onFileUpload, onTableCreated, onCommonColumnsChange, curr
         }
     };
 
+    const handleTableClick = (tableName) => {
+        if (alasql.tables[tableName]) {
+            const data = alasql(`SELECT * FROM [${tableName}]`);
+            setCurrentData(data);
+            setColumnNames(Object.keys(data[0] || {}));
+        } else {
+            fetchTableData(tableName);
+        }
+    };
+
+    const createAlaSQLTable = (tableName, data) => {
+        if (!data || data.length === 0) {
+            console.error('No data to create AlaSQL table');
+            return;
+        }
+
+        try {
+            alasql(`DROP TABLE IF EXISTS [${tableName}]`);
+            const createTableQuery = `CREATE TABLE [${tableName}] (${Object.keys(data[0]).map(col => `[${col}] STRING`).join(', ')})`;
+            alasql(createTableQuery);
+            alasql(`INSERT INTO [${tableName}] SELECT * FROM ?`, [data]);
+            console.log(`Data inserted into AlaSQL table: ${tableName}`);
+        } catch (e) {
+            console.error('Error in AlaSQL operations:', e);
+        }
+    };
+
+    const fetchTableData = async (tableName) => {
+        console.log(`Fetching data for table: ${tableName}`);
+        try {
+            const response = await fetch(`http://localhost:8001/api/kpis?table=${tableName}`);
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            const data = await response.json();
+            console.log('Fetched data:', data);
+            
+            createAlaSQLTable(tableName, data);
+            handleFileUpload(tableName, data, Object.keys(data[0]));
+            
+            setIsDataLoaded(true);
+            console.log('State updated with new data');
+        } catch (error) {
+            console.error('Error fetching data from table:', error);
+            alert('Error fetching data from table: ' + error.message);
+        }
+    };
+
     return (
         <div>
             {dataSource === 'csv' && (
                 <div className="file-upload">
-                    <input type="file" accept=".csv" onChange={handleFileUpload} />
+                    <input 
+                        type="file" 
+                        accept=".csv" 
+                        onChange={(e) => {
+                            const file = e.target.files[0];
+                            if (file) {
+                                Papa.parse(file, {
+                                    complete: (results) => {
+                                        if (results.data && results.data.length > 0) {
+                                            handleFileUpload(file.name, results.data, results.meta.fields);
+                                        } else {
+                                            console.error('No data parsed from CSV');
+                                        }
+                                    },
+                                    header: true,
+                                    skipEmptyLines: true
+                                });
+                            }
+                        }} 
+                    />
                 </div>
             )}
 
