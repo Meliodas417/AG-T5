@@ -3,38 +3,16 @@ import Layout from './components/Layout'
 import Sidebar from './components/Sidebar'
 import DataTable from './components/DataTable'
 import ImportModal from './components/ImportModal'
-import MergeModal from './components/MergeModal'
 import ExportModal from './components/ExportModal'
 import ExpressionModal from './components/ExpressionModal'
-import type { Expression } from './components/ExpressionModal'
-
-interface HistoryItem {
-  id: string
-  name: string
-  timestamp: Date
-  type: 'csv' | 'database'
-  headers: string[]
-  data: string[][]
-  source?: {
-    type: 'database'
-    connection: string
-    query: string
-  }
-}
-
-interface JoinConfig {
-  leftTable: string
-  rightTable: string
-  leftColumn: string
-  rightColumn: string
-  type: 'inner' | 'left' | 'right' | 'full'
-}
+import JoinModal from './components/JoinModal'
+import type { HistoryItem, JoinConfig, Expression } from './types'
 
 const App = () => {
   const [history, setHistory] = useState<HistoryItem[]>([])
   const [currentData, setCurrentData] = useState<HistoryItem | null>(null)
   const [isImportModalOpen, setIsImportModalOpen] = useState(false)
-  const [isMergeModalOpen, setIsMergeModalOpen] = useState(false)
+  const [isJoinModalOpen, setIsJoinModalOpen] = useState(false)
   const [isExportModalOpen, setIsExportModalOpen] = useState(false)
   const [isExpressionModalOpen, setIsExpressionModalOpen] = useState(false)
 
@@ -57,20 +35,6 @@ const App = () => {
     setIsImportModalOpen(false)
   }
 
-  const handleAddColumn = (columnName: string) => {
-    if (!currentData) return
-
-    const newData = {
-      ...currentData,
-      headers: [...currentData.headers, columnName],
-      data: currentData.data.map(row => [...row, ''])
-    }
-    setCurrentData(newData)
-    setHistory(history.map(item => 
-      item.id === currentData.id ? newData : item
-    ))
-  }
-
   const handleUpdateCell = (rowIndex: number, colIndex: number, value: string) => {
     if (!currentData) return
 
@@ -86,61 +50,6 @@ const App = () => {
     setHistory(history.map(item => 
       item.id === currentData.id ? newData : item
     ))
-  }
-
-  const handleMerge = (selectedItems: HistoryItem[]) => {
-    if (selectedItems.length < 2) return
-
-    // Use headers from the first item as the base
-    const baseHeaders = selectedItems[0].headers
-    
-    // Initialize merged data with the first item's data
-    let mergedData = selectedItems[0].data.map(row => [...row])
-    
-    // Merge data from subsequent items
-    for (let i = 1; i < selectedItems.length; i++) {
-      const currentItem = selectedItems[i]
-      
-      // For each row in the current dataset
-      currentItem.data.forEach((currentRow, rowIndex) => {
-        // If we need to add new rows to merged data
-        if (rowIndex >= mergedData.length) {
-          mergedData.push(new Array(baseHeaders.length).fill(''))
-        }
-        
-        // For each cell in the current row
-        currentRow.forEach((cell, colIndex) => {
-          const baseCell = mergedData[rowIndex][colIndex]
-          
-          // Try to parse both values as numbers
-          const num1 = parseFloat(baseCell)
-          const num2 = parseFloat(cell)
-          
-          // If both are valid numbers, add them
-          if (!isNaN(num1) && !isNaN(num2)) {
-            mergedData[rowIndex][colIndex] = (num1 + num2).toString()
-          } else {
-            // If not numbers, concatenate as strings
-            mergedData[rowIndex][colIndex] = baseCell 
-              ? `${baseCell}${cell}` 
-              : cell
-          }
-        })
-      })
-    }
-
-    const newItem: HistoryItem = {
-      id: crypto.randomUUID(),
-      name: `Merged ${new Date().toLocaleString()}`,
-      timestamp: new Date(),
-      type: 'csv',
-      headers: baseHeaders,
-      data: mergedData
-    }
-
-    setHistory([newItem, ...history])
-    setCurrentData(newItem)
-    setIsMergeModalOpen(false)
   }
 
   const handleExport = async (type: 'csv' | 'database', connection?: string) => {
@@ -232,9 +141,15 @@ const App = () => {
 
     if (leftColIndex === -1 || rightColIndex === -1) return
 
-    // Create a map for quick lookup
+    // Create filtered right headers (excluding the join column)
+    const rightHeaders = rightTable.headers.filter((_, index) => index !== rightColIndex)
+
+    // Create a map for quick lookup, excluding the join column from right table values
     const rightMap = new Map(
-      rightTable.data.map(row => [row[rightColIndex], row])
+      rightTable.data.map(row => [
+        row[rightColIndex],
+        row.filter((_, index) => index !== rightColIndex)
+      ])
     )
 
     let joinedData: string[][] = []
@@ -246,7 +161,36 @@ const App = () => {
           .filter(leftRow => rightMap.has(leftRow[leftColIndex]))
           .map(leftRow => [...leftRow, ...rightMap.get(leftRow[leftColIndex])!])
         break
-      // Add other join types here
+      case 'left':
+        joinedData = leftTable.data.map(leftRow => {
+          const rightRow = rightMap.get(leftRow[leftColIndex])
+          return [...leftRow, ...(rightRow || new Array(rightHeaders.length).fill(''))]
+        })
+        break
+      case 'right':
+        const leftMap = new Map(
+          leftTable.data.map(row => [row[leftColIndex], row])
+        )
+        joinedData = rightTable.data.map(rightRow => {
+          const leftRow = leftMap.get(rightRow[rightColIndex])
+          const filteredRightRow = rightRow.filter((_, index) => index !== rightColIndex)
+          return [...(leftRow || new Array(leftTable.headers.length).fill('')), ...filteredRightRow]
+        })
+        break
+      case 'full':
+        // Add all left rows first
+        joinedData = leftTable.data.map(leftRow => {
+          const rightRow = rightMap.get(leftRow[leftColIndex])
+          return [...leftRow, ...(rightRow || new Array(rightHeaders.length).fill(''))]
+        })
+        // Add remaining right rows
+        rightTable.data
+          .filter(rightRow => !leftTable.data.some(leftRow => leftRow[leftColIndex] === rightRow[rightColIndex]))
+          .forEach(rightRow => {
+            const filteredRightRow = rightRow.filter((_, index) => index !== rightColIndex)
+            joinedData.push([...new Array(leftTable.headers.length).fill(''), ...filteredRightRow])
+          })
+        break
     }
 
     const newItem: HistoryItem = {
@@ -254,7 +198,7 @@ const App = () => {
       name: `Joined ${leftTable.name} & ${rightTable.name}`,
       timestamp: new Date(),
       type: 'csv',
-      headers: [...leftTable.headers, ...rightTable.headers],
+      headers: [...leftTable.headers, ...rightHeaders],
       data: joinedData
     }
 
@@ -270,8 +214,12 @@ const App = () => {
             history={history}
             onHistoryItemClick={setCurrentData}
             onImportClick={() => setIsImportModalOpen(true)}
-            onMergeClick={() => setIsMergeModalOpen(true)}
+            onJoinClick={() => setIsJoinModalOpen(true)}
             onExpressionClick={() => setIsExpressionModalOpen(true)}
+            profile={{
+              name: 'Nicolas Huang',
+              email: 'nicolas.huang@utdallas.edu',
+            }}
           />
         }
       >
@@ -281,7 +229,6 @@ const App = () => {
             <DataTable
               headers={currentData.headers}
               data={currentData.data}
-              onAddColumn={handleAddColumn}
               onUpdateCell={handleUpdateCell}
               onExport={() => setIsExportModalOpen(true)}
             />
@@ -299,11 +246,11 @@ const App = () => {
         onImport={handleImport}
       />
 
-      <MergeModal
-        isOpen={isMergeModalOpen}
-        onClose={() => setIsMergeModalOpen(false)}
+      <JoinModal
+        isOpen={isJoinModalOpen}
+        onClose={() => setIsJoinModalOpen(false)}
         history={history}
-        onMerge={handleMerge}
+        onJoin={handleJoin}
       />
 
       <ExportModal

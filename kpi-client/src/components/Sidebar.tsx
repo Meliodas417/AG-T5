@@ -1,25 +1,32 @@
-import { useState } from 'react'
-
-interface HistoryItem {
-  id: string
-  name: string
-  timestamp: Date
-  type: 'csv' | 'database'
-}
+import type { HistoryItem } from '../types'
 
 interface SidebarProps {
   history: HistoryItem[]
   onHistoryItemClick: (item: HistoryItem) => void
   onImportClick: () => void
-  onMergeClick: () => void
+  onJoinClick: () => void
   onExpressionClick: () => void
+  profile?: {
+    name: string
+    email: string
+    avatar?: string
+  }
 }
 
-const Sidebar = ({ history, onHistoryItemClick, onImportClick, onMergeClick, onExpressionClick }: SidebarProps) => {
+const Sidebar = ({ 
+  history, 
+  onHistoryItemClick, 
+  onImportClick, 
+  onJoinClick, 
+  onExpressionClick,
+  profile = {
+    name: 'John Doe',
+    email: 'john@example.com'
+  }
+}: SidebarProps) => {
   return (
     <div className="h-full flex flex-col">
-      {/* Logo and Name Section */}
-      <div className="p-4 border-b border-night/10">
+      <div className="p-4 border-b border-night/10 flex items-center">
         <div className="flex items-center space-x-3">
           <svg 
             xmlns="http://www.w3.org/2000/svg" 
@@ -33,17 +40,15 @@ const Sidebar = ({ history, onHistoryItemClick, onImportClick, onMergeClick, onE
           </svg>
           <div>
             <h1 className="text-xl font-bold text-night">KPI Tool</h1>
-            <p className="text-xs text-night/60">Data Processing Tool</p>
           </div>
         </div>
       </div>
 
-      {/* Existing Sidebar Content */}
       <div className="flex-1 p-4 space-y-4 overflow-y-auto">
         <div className="space-y-2">
           <button
             onClick={onImportClick}
-            className="w-full px-4 py-2 bg-celtic-blue text-snow rounded-lg hover:bg-opacity-90 transition-all flex items-center justify-center space-x-2"
+            className="w-full rounded-lg hover:bg-opacity-90 transition-all flex items-center justify-center bg-celtic-blue text-snow px-4 py-2 space-x-2"
           >
             <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
               <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
@@ -51,17 +56,17 @@ const Sidebar = ({ history, onHistoryItemClick, onImportClick, onMergeClick, onE
             <span>Import Data</span>
           </button>
           <button
-            onClick={onMergeClick}
-            className="w-full px-4 py-2 border border-celtic-blue text-celtic-blue rounded-lg hover:bg-celtic-blue/10 transition-all flex items-center justify-center space-x-2"
+            onClick={onJoinClick}
+            className="w-full rounded-lg hover:bg-celtic-blue/10 transition-all flex items-center justify-center border border-celtic-blue text-celtic-blue px-4 py-2 space-x-2"
           >
             <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
               <path strokeLinecap="round" strokeLinejoin="round" d="M8 7v8a2 2 0 002 2h6M6 11l-4 4 4 4" />
             </svg>
-            <span>Merge Data</span>
+            <span>Join Tables</span>
           </button>
           <button
             onClick={onExpressionClick}
-            className="w-full px-4 py-2 border border-celtic-blue text-celtic-blue rounded-lg hover:bg-celtic-blue/10 transition-all flex items-center justify-center space-x-2"
+            className="w-full rounded-lg hover:bg-celtic-blue/10 transition-all flex items-center justify-center border border-celtic-blue text-celtic-blue px-4 py-2 space-x-2"
           >
             <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
               <path strokeLinecap="round" strokeLinejoin="round" d="M4 7h16M4 12h16M4 17h10" />
@@ -84,6 +89,32 @@ const Sidebar = ({ history, onHistoryItemClick, onImportClick, onMergeClick, onE
               </div>
             </button>
           ))}
+        </div>
+      </div>
+
+      <div className="mt-auto border-t border-night/10">
+        <div className="p-4 flex items-center space-x-3">
+          <div className="w-10 h-10 rounded-full bg-celtic-blue/10 flex items-center justify-center flex-shrink-0">
+            {profile.avatar ? (
+              <img 
+                src={profile.avatar} 
+                alt={profile.name} 
+                className="w-full h-full rounded-full object-cover"
+              />
+            ) : (
+              <span className="text-lg font-medium text-celtic-blue">
+                {profile.name.charAt(0)}
+              </span>
+            )}
+          </div>
+          <div className="flex-1 min-w-0">
+            <div className="text-sm font-medium text-night truncate">
+              {profile.name}
+            </div>
+            <div className="text-xs text-night/60 truncate">
+              {profile.email}
+            </div>
+          </div>
         </div>
       </div>
     </div>

@@ -1,48 +1,46 @@
 import { useState } from 'react'
 
-interface DataTableProps {
+type DataTableProps = {
   headers: string[]
   data: string[][]
-  onAddColumn: (columnName: string) => void
   onUpdateCell: (rowIndex: number, colIndex: number, value: string) => void
   onExport: () => void
 }
 
-const DataTable = ({ headers, data, onAddColumn, onUpdateCell, onExport }: DataTableProps) => {
-  const [newColumnName, setNewColumnName] = useState('')
+const DataTable = ({ headers, data, onUpdateCell, onExport }: DataTableProps) => {
+  const [searchTerm, setSearchTerm] = useState('')
 
-  const handleAddColumn = () => {
-    if (newColumnName.trim()) {
-      onAddColumn(newColumnName.trim())
-      setNewColumnName('')
-    }
-  }
+  const filteredData = data.filter(row =>
+    row.some(cell =>
+      cell.toLowerCase().includes(searchTerm.toLowerCase())
+    )
+  )
 
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between bg-snow p-4 rounded-lg shadow-sm border border-night/5">
-        <div className="flex items-center space-x-3">
+        <div className="relative flex-1 max-w-md">
           <input
             type="text"
-            value={newColumnName}
-            onChange={(e) => setNewColumnName(e.target.value)}
-            placeholder="New column name"
-            className="px-4 py-2.5 bg-snow border border-night/10 rounded-lg focus:outline-none focus:ring-2 focus:ring-bittersweet/30 text-sm"
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            placeholder="Search..."
+            className="w-full pl-10 pr-4 py-2 bg-white border border-night/10 rounded-lg focus:outline-none focus:ring-2 focus:ring-celtic-blue/30 text-sm"
           />
-          <button
-            onClick={handleAddColumn}
-            className="border border-bittersweet text-bittersweet px-4 py-2.5 rounded-lg hover:bg-bittersweet/10 transition-all text-sm font-medium flex items-center space-x-2"
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-night/40"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
           >
-            <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-              <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
-            </svg>
-            <span>Add Column</span>
-          </button>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+          </svg>
         </div>
-        
         <button
           onClick={onExport}
-          className="border border-celtic-blue text-celtic-blue px-4 py-2.5 rounded-lg hover:bg-celtic-blue/10 transition-all flex items-center space-x-2 text-sm font-medium"
+          className="ml-4 border border-celtic-blue text-celtic-blue px-4 py-2 rounded-lg hover:bg-celtic-blue/10 transition-all flex items-center space-x-2 text-sm font-medium"
         >
           <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
             <path strokeLinecap="round" strokeLinejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
@@ -55,16 +53,16 @@ const DataTable = ({ headers, data, onAddColumn, onUpdateCell, onExport }: DataT
         <div className="overflow-x-auto">
           <table className="w-full border-collapse">
             <thead>
-              <tr className="bg-night/[0.03] border-b border-night/10">
+              <tr className="bg-celtic-blue/5 border-b border-night/5">
                 {headers.map((header, index) => (
-                  <th key={index} className="px-4 py-3 text-left text-night/80 font-medium text-sm">
+                  <th key={index} className="px-4 py-3 text-left text-sm font-medium text-night">
                     {header}
                   </th>
                 ))}
               </tr>
             </thead>
             <tbody>
-              {data.map((row, rowIndex) => (
+              {filteredData.map((row, rowIndex) => (
                 <tr 
                   key={rowIndex} 
                   className="border-b border-night/5 last:border-0 hover:bg-celtic-blue/[0.02] transition-colors"

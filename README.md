@@ -5,5 +5,3 @@ This repository contains the AG-T5 project, designed for managing and analyzing 
 ## Integration Guide
 
 For detailed setup instructions and project information, please refer to the [INTEGRATION_GUIDE.md](./INTEGRATION_GUIDE.md).
-
-

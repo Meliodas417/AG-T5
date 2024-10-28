@@ -103,9 +103,3 @@ This will create an optimized build of the app in the `/build` directory, which 
 If you need to extend the functionality:
 - Adding New Charts: You can add more chart types by following the example of the Line and Doughnut charts in `App.js`. The `react-chartjs-2` library supports various types like Bar, Pie, and Radar charts.
 - Advanced CSV Features: If your use case requires advanced data manipulation, consider implementing more complex formula parsing or additional features like filtering and sorting.
-
-
-
-
-
-
