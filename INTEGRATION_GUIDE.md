@@ -23,24 +23,10 @@ Before integrating the KPI Uploader, ensure that the following environment setup
 
 4. React: Ensure that React and the necessary libraries (e.g., Chart.js, alasql) are installed. You can install them using npm:
    ```bash
-   npm install
+   npm install react-chartjs-2 chart.js papaparse alasql
    ```
 
-## 2. Install Required Dependencies
-Ensure that the following dependencies are installed:
-
-- `react-chartjs-2` for chart rendering
-- `chart.js` for chart creation
-- `papaparse` for csv parsing
-- `alasql` for SQL-like querying on the frontend
-
-If these libraries are not already installed in your project, install them by running:
-
-```bash
-npm install react-chartjs-2 chart.js papaparse alasql
-```
-
-## 3. Project Structure
+## 2. Project Structure
 Here is the project structure for the KPI Uploader integration:
 
 ```bash
@@ -63,8 +49,8 @@ Here is the project structure for the KPI Uploader integration:
 └── README.md                # Project documentation
 ```
 
-## 4. Database Setup (Switch from MySQL to SQLite)
-1. SQLite Setup: We have transitioned from MySQL to SQLite as the primary database for this project.
+## 3. Database Setup (SQLite)
+1. SQLite Setup: We are using SQLite to store data.
    - SQLite database files will be automatically created by the `createDataBase.py` script.
    - No separate database server is required for SQLite; it stores everything locally in a single `.db` file.
 
@@ -82,7 +68,7 @@ Here is the project structure for the KPI Uploader integration:
    - This will run the FastAPI server on port 8001, and it will handle API requests for fetching data from the SQLite database.
 
 
-## 5. Running the Application
+## 4. Running the Application
 To run the React frontend and FastAPI backend:
 
 1. Running the Frontend (React):
@@ -100,7 +86,7 @@ To run the React frontend and FastAPI backend:
    - Ensure the FastAPI server runs on port `8001` for proper communication with the React frontend.
 
 
-## 6. File Upload and Chart Visualization
+## 5. File Upload and Chart Visualization
 The frontend has been updated to support fetching data directly from the SQLite database:
 
 1. Fetching Available Tables:
@@ -115,7 +101,7 @@ The frontend has been updated to support fetching data directly from the SQLite 
    - Import KPI Data: `POST /api/import_kpis`
 
 
-## 7. File Upload and Chart Visualization
+## 6. File Upload and Chart Visualization
 The `App.js` component handles file uploading, CSV parsing, and chart visualization.
 
 - CSV File Upload: You can upload CSV files and visualize the data in both table and chart formats.
@@ -123,7 +109,7 @@ The `App.js` component handles file uploading, CSV parsing, and chart visualizat
 - Line Chart and Doughnut Chart: The data is visualized using two chart types, which can be customized in the `generateChartData` and `generatePieChartData` functions in `App.js`.
 
 
-## 8. Database Integration and Export
+## 7. Database Integration and Export
 The application supports two types of data import/export:
 
 1. Export CSV to Database:
@@ -132,12 +118,12 @@ The application supports two types of data import/export:
    - You can perform SQL-like joins using AlaSQL in the frontend. The application allows you to join data between CSV files and database tables dynamically.
 
 
-## 9. Further Steps and Customization
+## 8. Further Steps and Customization
 - Adding New Charts: You can extend the application by adding more chart types. For example, the `react-chartjs-2` library supports bar charts, radar charts, and more.
 - Advanced SQL Features: If your use case requires complex SQL queries, you can extend the FastAPI backend to support more advanced queries or add filtering/sorting functionality on the frontend.
 
 
-## 10. Development
+## 9. Development
 When you are ready to deploy the application, run:
 
 ```bash
