@@ -1,4 +1,5 @@
-from typing import Union, List, Dict, Any
+from typing import Union, List, Dict, Any, Optional
+from datetime import datetime
 
 NumericType = Union[int, float]
 
@@ -10,16 +11,30 @@ class Expression:
         return float(self.value)
 
 class HistoryItem:
-    def __init__(self, operation: str, inputs: List[Any], result: Any):
+    def __init__(self, 
+                 operation: str, 
+                 inputs: List[Any], 
+                 result: Any,
+                 name: Optional[str] = None,
+                 headers: Optional[List[str]] = None,
+                 data: Optional[List[List[str]]] = None):
         self.operation = operation
         self.inputs = inputs
         self.result = result
+        self.name = name
+        self.headers = headers or []
+        self.data = data or []
+        self.timestamp = datetime.now()
 
     def to_dict(self) -> Dict[str, Any]:
         return {
             'operation': self.operation,
             'inputs': self.inputs,
-            'result': self.result
+            'result': self.result,
+            'name': self.name,
+            'headers': self.headers,
+            'data': self.data,
+            'timestamp': self.timestamp
         }
 
 class JoinConfig:

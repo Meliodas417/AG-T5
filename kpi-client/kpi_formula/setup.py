@@ -1,8 +1,8 @@
 from setuptools import setup, find_packages
 
 setup(
-    name="kpi-formula-jun",
-    version="0.2.5",
+    name="kpi-formula-t5",
+    version="0.1.0",
     author="Jun Ren",
     author_email="leoren1314@gmail.com",
     description="A KPI calculation tool",
@@ -32,7 +32,7 @@ setup(
         "flask>=2.0.0",
     ],
     project_urls={
-        "Bug Reports": "https://github.com/yourusername/kpi-formula/issues",
-        "Source": "https://github.com/yourusername/kpi-formula",
+        "Bug Reports": "https://github.com/Meliodas417/AG-T5",
+        "Source": "https://github.com/Meliodas417/AG-T5",
     },
 )

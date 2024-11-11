@@ -1,17 +1,24 @@
-from .core import operations, models
-from .advanced import data_processor, data_validator, kpi_calculator, time_series
-from .server import start_server
+"""
+KPI Formula Package
+A Python package for KPI calculations and data processing.
+"""
+
+from .core.data_manager import DataManager
+from .core.operations import ExpressionManager
+from .core.models import HistoryItem
+from .advanced.data_processor import DataProcessor
+from .advanced.data_validator import DataValidator
+from .advanced.kpi_calculator import KPICalculator
+from .advanced.time_series import TimeSeriesAnalyzer
+
+__version__ = "0.1.0"
 
 __all__ = [
-    'operations',
-    'models',
-    'data_processor',
-    'data_validator',
-    'kpi_calculator',
-    'time_series',
-    'launch_ui'
+    'DataManager',
+    'ExpressionManager',
+    'HistoryItem',
+    'DataProcessor',
+    'DataValidator',
+    'KPICalculator',
+    'TimeSeriesAnalyzer'
 ]
-
-def launch_ui():
-    """Launch the KPI Formula UI"""
-    start_server()
