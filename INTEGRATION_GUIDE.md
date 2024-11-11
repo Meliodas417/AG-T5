@@ -170,7 +170,20 @@ The project structure for the KPI Uploader integration is as follows:
 - Tailwind CSS is used for styling. Update styles directly in `index.css` or add custom components.
 
 
-## 8. Deployment
+## 8. KPI Library Integration
+
+To use the KPI Library created by Team 5, follow these steps:
+
+- Download and install the `kpi-formula-jun library`, which Team 5 has published on the Python community platform. Ensure it is installed by running:
+
+  ```
+  pip install kpi-formula-jun
+  ```
+
+This library provides essential KPI calculation functions that other teams can integrate for consistent data handling.
+
+
+## 9. Deployment
 
 When ready for production:
 
