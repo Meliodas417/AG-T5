@@ -1,6 +1,4 @@
-Here’s your **KPI Formula Usage Guide** formatted in Markdown for your project:
 
-```markdown
 # KPI Formula Usage Guide
 
 ## Table of Contents
