@@ -1,0 +1,64 @@
+{
+  "dataset_name": "sales",
+  "total_rows": 10,
+  "total_columns": 6,
+  "columns": [
+    "date",
+    "product_id",
+    "customer_id",
+    "sales_amount",
+    "quantity",
+    "unit_price"
+  ],
+  "numeric_columns": [
+    "sales_amount",
+    "quantity",
+    "unit_price"
+  ],
+  "categorical_columns": [
+    "date",
+    "product_id",
+    "customer_id"
+  ],
+  "missing_values": {
+    "date": 0,
+    "product_id": 0,
+    "customer_id": 0,
+    "sales_amount": 0,
+    "quantity": 0,
+    "unit_price": 0
+  },
+  "numeric_summary": {
+    "sales_amount": {
+      "count": 10.0,
+      "mean": 1210.0,
+      "std": 252.54262566501083,
+      "min": 800.0,
+      "25%": 1025.0,
+      "50%": 1225.0,
+      "75%": 1375.0,
+      "max": 1600.0
+    },
+    "quantity": {
+      "count": 10.0,
+      "mean": 4.2,
+      "std": 1.5491933384829668,
+      "min": 2.0,
+      "25%": 3.0,
+      "50%": 4.0,
+      "75%": 5.0,
+      "max": 7.0
+    },
+    "unit_price": {
+      "count": 10.0,
+      "mean": 314.1904761904762,
+      "std": 97.35039817687067,
+      "min": 200.0,
+      "25%": 233.92857142857144,
+      "50%": 302.5,
+      "75%": 391.6666666666667,
+      "max": 475.0
+    }
+  },
+  "memory_usage": 2002
+}

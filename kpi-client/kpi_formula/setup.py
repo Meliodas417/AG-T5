@@ -1,9 +1,11 @@
 from setuptools import setup, find_packages
 
+with open("README.md", "r", encoding="utf-8") as fh:
+    long_description = fh.read()
 setup(
     name="kpi-formula-t5",
-    version="0.1.0",
-    author="Jun Ren",
+    version="0.2.0",
+    author="4485-t5",
     author_email="leoren1314@gmail.com",
     description="A KPI calculation tool",
     long_description=open("README.md").read(),
@@ -28,6 +30,8 @@ setup(
     install_requires=[
         "pandas>=1.0.0",
         "numpy>=1.18.0",
+        "openpyxl>=3.0.0",
+        "pyarrow>=5.0.0",
         "statistics",
         "flask>=2.0.0",
     ],
