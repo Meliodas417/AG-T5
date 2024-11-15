@@ -6,6 +6,8 @@ from pathlib import Path
 class DataManager:
     def __init__(self):
         self.dataframes = {}  # Store all dataframes
+        self.history = []     # 添加历史记录列表
+        self.current_data = None  # 添加当前数据属性
         
     def load_data(self, data: Union[str, pd.DataFrame], name: str) -> None:
         """
