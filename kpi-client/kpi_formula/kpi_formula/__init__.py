@@ -11,7 +11,7 @@ from .advanced.data_validator import DataValidator
 from .advanced.kpi_calculator import KPICalculator
 from .advanced.time_series import TimeSeriesAnalyzer
 
-__version__ = "0.2.0"
+__version__ = "0.2.1"
 
 __all__ = [
     'DataManager',

@@ -1,27 +1,37 @@
 
-# KPI Formula Usage Guide
+# KPI Formula Tool Usage Guide
 
 ## Table of Contents
-1. [Installation](#installation)
-2. [Basic Usage](#basic-usage)
-3. [Data Loading](#data-loading)
-4. [Data Operations](#data-operations)
-5. [Table Operations](#table-operations)
-6. [Data Export](#data-export)
-7. [Complete Examples](#complete-examples)
-8. [Common Issues](#common-issues)
+1. [Installation](#1-installation)  
+2. [Basic Usage](#2-basic-usage)  
+3. [Data Loading](#3-data-loading)  
+4. [Data Operations](#4-data-operations)  
+5. [Table Operations](#5-table-operations)  
+6. [Advanced KPI Calculations](#6-advanced-kpi-calculations)  
+7. [Data Processing](#7-data-processing)  
+8. [Data Export](#8-data-export)  
+9. [Common Issues](#9-common-issues)  
+10. [Best Practices](#10-best-practices)  
 
 ---
 
 ## 1. Installation
+
 ```bash
 pip install kpi-formula-t5
-pip install pandas numpy openpyxl
+
+# For development installation
+pip install -e ".[dev]"
+
+# For database support
+pip install ".[mysql]"  # MySQL support
+pip install ".[postgresql]"  # PostgreSQL support
 ```
 
 ---
 
 ## 2. Basic Usage
+
 ```python
 from kpi_formula import DataManager
 
@@ -33,47 +43,53 @@ manager = DataManager()
 
 ## 3. Data Loading
 
-### a) Load from CSV
+### a) From Files
 ```python
-# Load single CSV file
-manager.load_data('sales_data.csv', 'sales')
-```
-**Example CSV format:**
-```csv
-date,product_id,customer_id,sales_amount,quantity
-2023-01-01,P001,C1,1000,5
-2023-01-02,P002,C2,1200,3
+# Load CSV
+manager.load_data('sales.csv', 'sales')
+
+# Load Excel
+manager.load_data('customers.xlsx', 'customers')
+
+# Load JSON
+manager.load_data('products.json', 'products')
 ```
 
-### b) Load from DataFrame
+### b) From Database
 ```python
-import pandas as pd
+# Connect to database
+manager.connect_database("sqlite:///test.db")  # SQLite
+manager.connect_database("postgresql://user:password@localhost:5432/dbname")  # PostgreSQL
+manager.connect_database("mysql+pymysql://user:password@localhost:3306/dbname")  # MySQL
 
-df = pd.DataFrame({
-    'A': [1, 2, 3],
-    'B': [4, 5, 6]
-})
-manager.load_data(df, 'my_data')
+# Load from table
+manager.load_from_table(
+    table_name='sales_transactions',
+    name='sales'
+)
+
+# Load with SQL query
+manager.load_from_query(
+    """
+    SELECT s.*, c.customer_name
+    FROM sales_transactions s
+    JOIN customers c ON s.customer_id = c.customer_id
+    WHERE s.sales_amount > 1000
+    """,
+    name='filtered_sales'
+)
 ```
 
 ---
 
 ## 4. Data Operations
 
-### a) Add Calculated Column
+### a) Add Calculated Columns
 ```python
-# Basic calculation
 manager.add_column(
     data_name='sales',
     new_column='unit_price',
     expression='sales_amount / quantity'
-)
-
-# Calculation with condition
-manager.add_column(
-    data_name='sales',
-    new_column='total_with_tax',
-    expression='sales_amount * 1.1'  # 10% tax
 )
 ```
 
@@ -86,20 +102,22 @@ total = manager.compute(
     operation='sum'
 )
 
-# Average
-average = manager.compute(
+# Average with grouping
+avg_by_region = manager.compute(
     data_name='sales',
-    columns=['unit_price'],
-    operation='mean'
+    columns=['sales_amount'],
+    operation='mean',
+    group_by='region'
 )
 ```
 
-**Supported operations:**
-- `'sum'`: Sum
-- `'mean'`: Average
-- `'max'`: Maximum
-- `'min'`: Minimum
-- `'count'`: Count
+**Supported operations:**  
+- `'sum'`: Sum  
+- `'mean'`: Average  
+- `'median'`: Median  
+- `'max'`: Maximum  
+- `'min'`: Minimum  
+- `'count'`: Count  
 
 ---
 
@@ -107,60 +125,83 @@ average = manager.compute(
 
 ### a) Basic Join
 ```python
-# Load two datasets
-manager.load_data('sales_data.csv', 'sales')
-manager.load_data('customer_data.csv', 'customers')
-
-# Join operation
-manager.join(
+manager.join_datasets(
     left_name='sales',
     right_name='customers',
-    left_on='customer_id',
-    right_on='customer_id',
+    on='customer_id',
     how='left',
     result_name='sales_with_customer'
 )
 ```
 
-### b) Multi-Column Join
-```python
-manager.join(
-    left_name='sales',
-    right_name='customers',
-    left_on=['customer_id', 'region'],
-    right_on=['id', 'region'],
-    how='inner',
-    result_name='matched_sales'
-)
-```
-
-**Join Types:**
-- `how='left'`: Left join
-- `how='right'`: Right join
-- `how='inner'`: Inner join
-- `how='outer'`: Outer join
+**Join Types:**  
+- `how='left'`: Left join  
+- `how='right'`: Right join  
+- `how='inner'`: Inner join  
+- `how='outer'`: Outer join  
 
 ---
 
-## 6. Data Export
+## 6. Advanced KPI Calculations
 
-### a) CSV Export
 ```python
-manager.export_data('sales', 'exports/sales.csv')
+from kpi_formula.advanced.kpi_calculator import KPICalculator
+
+# ROI
+roi = KPICalculator.roi(revenue=1000, investment=500)
+
+# Conversion Rate
+conv_rate = KPICalculator.conversion_rate(
+    conversions=30,
+    visitors=1000
+)
+
+# Customer Lifetime Value
+clv = KPICalculator.customer_lifetime_value(
+    avg_purchase_value=100,
+    avg_purchase_frequency=4,
+    customer_lifespan=3
+)
+
+# Gross Margin
+margin = KPICalculator.gross_margin(
+    revenue=1000,
+    cost=600
+)
 ```
 
-### b) Excel Export
+---
+
+## 7. Data Processing
+
 ```python
+from kpi_formula.advanced.data_processor import DataProcessor
+
+# Moving Average
+ma = DataProcessor.moving_average(sales_data, window=3)
+
+# Year-over-Year Growth
+yoy = DataProcessor.year_over_year_growth(sales_data)
+```
+
+---
+
+## 8. Data Export
+
+### a) To Files
+```python
+# CSV Export
+manager.export_data('sales', 'exports/sales.csv')
+
+# Excel Export
 manager.export_data(
     'sales',
     'exports/sales.xlsx',
     format='excel',
     sheet_name='Sales Data'
 )
-```
 
-### c) JSON Export
-```python
+# JSON Export
 manager.export_data(
     'sales',
     'exports/sales.json',
@@ -169,98 +210,58 @@ manager.export_data(
 )
 ```
 
-### d) Summary Export
+### b) To Database
 ```python
-manager.export_summary('sales', 'exports/sales_summary.json')
+manager.save_to_database(
+    data_name='sales_analysis',
+    table_name='analysis_results',
+    if_exists='replace'  # 'fail', 'replace', or 'append'
+)
 ```
 
 ---
 
-## 7. Complete Examples
-```python
-from kpi_formula import DataManager
-
-# Initialize
-manager = DataManager()
-
-try:
-    # 1. Load data
-    manager.load_data('sales_data.csv', 'sales')
-    manager.load_data('customer_data.csv', 'customers')
-
-    # 2. Add calculated column
-    manager.add_column(
-        data_name='sales',
-        new_column='unit_price',
-        expression='sales_amount / quantity'
-    )
-
-    # 3. Join data
-    manager.join(
-        left_name='sales',
-        right_name='customers',
-        left_on='customer_id',
-        right_on='customer_id',
-        how='left',
-        result_name='full_data'
-    )
-
-    # 4. Compute statistics
-    total_sales = manager.compute(
-        data_name='full_data',
-        columns=['sales_amount'],
-        operation='sum'
-    )
-    print(f"Total sales: {total_sales}")
-
-    # 5. Export results
-    manager.export_data(
-        'full_data',
-        'exports/analysis_results.xlsx',
-        format='excel',
-        sheet_name='Sales Analysis'
-    )
-
-except Exception as e:
-    print(f"Error: {str(e)}")
-```
-
----
-
-## 8. Common Issues
+## 9. Common Issues
 
 ### a) Import Errors
 Make sure all required dependencies are installed:
 ```bash
-pip install pandas numpy openpyxl
+pip install "kpi-formula-t5[all]"
 ```
 
-### b) File Path Errors
-Use absolute paths or ensure relative paths are correct:
+### b) Database Connection Errors
+- Check connection string format  
+- Verify database credentials  
+- Ensure database server is running  
+- Install appropriate database drivers:  
+  ```bash
+  pip install "kpi-formula-t5[mysql]"  # for MySQL
+  pip install "kpi-formula-t5[postgresql]"  # for PostgreSQL
+  ```
+
+### c) File Path Errors
 ```python
 import os
 file_path = os.path.join(os.getcwd(), 'data', 'sales.csv')
 manager.load_data(file_path, 'sales')
 ```
 
-### c) Memory Issues
-For large datasets, consider batch processing or sampling:
-```python
-# Read first 1000 rows
-import pandas as pd
-df = pd.read_csv('large_file.csv', nrows=1000)
-manager.load_data(df, 'sample_data')
-```
+---
 
-### d) Data Type Errors
-Ensure correct data types:
-```python
-# Convert data types before loading
-df['sales_amount'] = pd.to_numeric(df['sales_amount'], errors='coerce')
-```
+## 10. Best Practices
+
+1. Always use try-except blocks for error handling  
+2. Validate data before processing  
+3. Use meaningful names for datasets  
+4. Close database connections when done  
+5. Export results regularly  
+6. Monitor memory usage with large datasets  
+7. Use appropriate data types for calculations  
 
 ---
 
-For more information and updates, please visit our [GitHub repository](https://github.com/Meliodas417/AG-T5).
+For more information and updates, visit:  
+[GitHub Repository](https://github.com/Meliodas417/AG-T5)
 ```
 
+You can copy and paste this into your project's Markdown file. Let me know if you need further modifications!

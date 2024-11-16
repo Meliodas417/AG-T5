@@ -1,39 +1,108 @@
 import pandas as pd
 import numpy as np
-from typing import List, Dict, Union, Any
+from typing import List, Dict, Union, Any, Optional
 from pathlib import Path
+import sqlalchemy
 
 class DataManager:
     def __init__(self):
         self.dataframes = {}  # Store all dataframes
+        self.db_engine = None
         self.history = []     # 添加历史记录列表
         self.current_data = None  # 添加当前数据属性
         
-    def load_data(self, data: Union[str, pd.DataFrame], name: str) -> None:
+    def connect_database(self, 
+                        connection_string: str,
+                        echo: bool = False) -> None:
         """
-        Entry function for loading data
+        Connect to a database
         
         Args:
-            data: CSV file path or pandas DataFrame
-            name: Name of the dataset
+            connection_string: Database connection string, for example:
+                - PostgreSQL: "postgresql://user:password@localhost:5432/dbname"
+                - MySQL: "mysql+pymysql://user:password@localhost:3306/dbname"
+                - SQLite: "sqlite:///path/to/database.db"
+            echo: Whether to print SQL statements (for debugging)
         """
         try:
-            if isinstance(data, str):
-                # If it's a file path, try to read CSV
-                df = pd.read_csv(data)
-            elif isinstance(data, pd.DataFrame):
-                # If it's already a DataFrame, use it directly
-                df = data
-            else:
-                raise ValueError("Unsupported data format. Please provide a CSV file path or pandas DataFrame")
+            self.db_engine = sqlalchemy.create_engine(connection_string, echo=echo)
+            print("Successfully connected to database")
+        except Exception as e:
+            raise ConnectionError(f"Failed to connect to database: {str(e)}")
+
+    def load_from_query(self, 
+                       query: str, 
+                       name: str,
+                       params: Optional[Dict] = None) -> None:
+        """
+        Load data from SQL query
+        
+        Args:
+            query: SQL query string
+            name: Dataset name
+            params: SQL parameters (optional)
+        """
+        if self.db_engine is None:
+            raise ConnectionError("Database not connected. Call connect_database() first")
             
+        try:
+            df = pd.read_sql(query, self.db_engine, params=params)
             self.dataframes[name] = df
-            print(f"Successfully loaded dataset '{name}'")
+            print(f"Successfully loaded dataset '{name}' from query")
             print(f"Columns: {df.columns.tolist()}")
             print(f"Rows: {len(df)}")
-            
         except Exception as e:
-            raise ImportError(f"Failed to load data: {str(e)}")
+            raise ImportError(f"Failed to load data from query: {str(e)}")
+
+    def load_from_table(self, 
+                       table_name: str, 
+                       name: str,
+                       columns: Optional[List[str]] = None,
+                       where: Optional[str] = None) -> None:
+        """
+        Load data from database table
+        
+        Args:
+            table_name: Database table name
+            name: Dataset name
+            columns: Columns to select (optional)
+            where: WHERE clause (optional)
+        """
+        cols = "*" if columns is None else ", ".join(columns)
+        query = f"SELECT {cols} FROM {table_name}"
+        if where:
+            query += f" WHERE {where}"
+            
+        self.load_from_query(query, name)
+
+    def save_to_database(self,
+                        data_name: str,
+                        table_name: str,
+                        if_exists: str = 'fail',
+                        index: bool = False) -> None:
+        """
+        Save data to database
+        
+        Args:
+            data_name: Dataset name
+            table_name: Target table name
+            if_exists: How to behave if table exists ('fail', 'replace', 'append')
+            index: Whether to save index
+        """
+        if data_name not in self.dataframes:
+            raise KeyError(f"Dataset '{data_name}' not found")
+            
+        try:
+            df = self.dataframes[data_name]
+            df.to_sql(
+                table_name,
+                self.db_engine,
+                if_exists=if_exists,
+                index=index
+            )
+            print(f"Successfully saved dataset '{data_name}' to table '{table_name}'")
+        except Exception as e:
+            raise ExportError(f"Failed to save data to database: {str(e)}")
 
     def add_column(self, 
                   data_name: str, 
