@@ -262,6 +262,3 @@ manager.load_data(file_path, 'sales')
 
 For more information and updates, visit:  
 [GitHub Repository](https://github.com/Meliodas417/AG-T5)
-```
-
-You can copy and paste this into your project's Markdown file. Let me know if you need further modifications!
