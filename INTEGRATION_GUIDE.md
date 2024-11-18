@@ -174,10 +174,10 @@ The project structure for the KPI Uploader integration is as follows:
 
 To use the KPI Library created by Team 5, follow these steps:
 
-- Download and install the `kpi-formula-jun library`, which Team 5 has published on the Python community platform. Ensure it is installed by running:
+- Download and install the `kpi-formula-t5 library`, which Team 5 has published on the Python community platform. Ensure it is installed by running:
 
   ```
-  pip install kpi-formula-jun
+  pip install kpi-formula-t5
   ```
 
 This library provides essential KPI calculation functions that other teams can integrate for consistent data handling.
