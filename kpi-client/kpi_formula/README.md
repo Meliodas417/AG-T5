@@ -18,6 +18,7 @@
 ## 1. Installation
 
 ```bash
+# For user installation
 pip install kpi-formula-t5
 
 # For development installation
@@ -38,7 +39,9 @@ from kpi_formula import DataManager
 # Initialize manager
 manager = DataManager()
 ```
+For example, see [`example_db_usage.py`](example_db_usage.py) and [`create_test_db.py`](create_test_db.py)
 
+run `create_test_db.py` first!!!!
 ---
 
 ## 3. Data Loading
