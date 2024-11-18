@@ -47,7 +47,7 @@ try:
     )
     
     # Format total sales with proper number formatting
-    print(f"\nTotal sales: ${float(total_sales):,.2f}")  # Convert to float and format
+    print(f"\nTotal sales: ${float(total_sales.iloc[0]):,.2f}")  # Convert to float and format
     
     # Export results
     manager.export_data(
@@ -74,7 +74,7 @@ try:
         columns=['sales_amount'],
         operation='mean'
     )
-    print(f"Average sale: ${float(avg_sales):,.2f}")
+    print(f"Average sale: ${float(avg_sales.iloc[0]):,.2f}")
     
     # Calculate total quantity
     total_qty = manager.compute(
@@ -82,7 +82,7 @@ try:
         columns=['quantity'],
         operation='sum'
     )
-    print(f"Total quantity: {int(total_qty):,}")
+    print(f"Total quantity: {int(total_qty.iloc[0]):,}")
     
     # Calculate average unit price
     avg_unit_price = manager.compute(
@@ -90,7 +90,7 @@ try:
         columns=['unit_price'],
         operation='mean'
     )
-    print(f"Average unit price: ${float(avg_unit_price):,.2f}")
+    print(f"Average unit price: ${float(avg_unit_price.iloc[0]):,.2f}")
 
 except Exception as e:
     print(f"Error: {str(e)}")
