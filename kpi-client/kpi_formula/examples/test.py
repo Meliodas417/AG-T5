@@ -31,11 +31,10 @@ total_sales = manager.compute(
 print(f"Total sales: {total_sales}")
 
 # Join datasets
-manager.join(
+manager.join_datasets(
     left_name='sales',
     right_name='customers',
-    left_on='customer_id',
-    right_on='customer_id',
+    on='customer_id',
     how='left',
     result_name='sales_with_customer'
 )

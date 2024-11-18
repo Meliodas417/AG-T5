@@ -7,13 +7,23 @@ try:
     # Connect to SQLite database
     manager.connect_database("sqlite:///test_sales.db")
     
-    # Load basic sales data
+    # Load all base tables
     manager.load_from_table(
         table_name='sales_transactions',
         name='sales'
     )
     
-    # Load data with SQL query
+    manager.load_from_table(
+        table_name='products',
+        name='products'
+    )
+    
+    manager.load_from_table(
+        table_name='customers',
+        name='customers'
+    )
+    
+    # Method 1: Using SQL JOIN (more efficient for large datasets)
     manager.load_from_query(
         """
         SELECT 
@@ -29,7 +39,24 @@ try:
         JOIN customers c ON s.customer_id = c.customer_id
         WHERE s.sales_amount > 2000
         """,
-        name='detailed_sales'
+        name='detailed_sales_sql'
+    )
+    
+    # Method 2: Using Python join_datasets (more flexible for in-memory operations)
+    manager.join_datasets(
+        left_name='sales',
+        right_name='products',
+        on='product_id',
+        how='left',
+        result_name='sales_with_products'
+    )
+    
+    manager.join_datasets(
+        left_name='sales_with_products',
+        right_name='customers',
+        on='customer_id',
+        how='left',
+        result_name='detailed_sales_python'
     )
     
     # Add calculated columns
@@ -47,19 +74,26 @@ try:
     )
     
     # Format total sales with proper number formatting
-    print(f"\nTotal sales: ${float(total_sales.iloc[0]):,.2f}")  # Convert to float and format
+    print(f"\nTotal sales: ${float(total_sales.iloc[0]):,.2f}")
     
-    # Export results
+    # Export results (both SQL and Python joined results)
     manager.export_data(
-        'detailed_sales',
-        'sales_analysis.xlsx',
+        'detailed_sales_sql',
+        'sales_analysis_sql.xlsx',
         format='excel',
-        sheet_name='Detailed Sales'
+        sheet_name='SQL Join Results'
+    )
+    
+    manager.export_data(
+        'detailed_sales_python',
+        'sales_analysis_python.xlsx',
+        format='excel',
+        sheet_name='Python Join Results'
     )
     
     # Save results back to database
     manager.save_to_database(
-        data_name='detailed_sales',
+        data_name='detailed_sales_python',
         table_name='sales_analysis',
         if_exists='replace'
     )

@@ -159,11 +159,12 @@ class DataManager:
         except Exception as e:
             raise ValueError(f"Computation failed: {str(e)}")
 
-    def join(self,
+    def join_datasets(self,
             left_name: str,
             right_name: str,
-            left_on: Union[str, List[str]],
-            right_on: Union[str, List[str]],
+            left_on: Union[str, List[str]] = None,
+            right_on: Union[str, List[str]] = None,
+            on: Union[str, List[str]] = None,
             how: str = 'inner',
             result_name: str = None) -> None:
         """
@@ -172,14 +173,19 @@ class DataManager:
         Args:
             left_name: Left dataset name
             right_name: Right dataset name
-            left_on: Left join key
-            right_on: Right join key
+            left_on: Left join key (if different from right)
+            right_on: Right join key (if different from left)
+            on: Join key (if same in both datasets)
             how: Join type ('inner', 'left', 'right', 'outer')
             result_name: Result dataset name
         """
         try:
             left_df = self.dataframes[left_name]
             right_df = self.dataframes[right_name]
+            
+            # Handle the case where 'on' is provided
+            if on is not None:
+                left_on = right_on = on
             
             result = pd.merge(
                 left_df,
@@ -189,7 +195,6 @@ class DataManager:
                 how=how
             )
             
-            # Use default name if result_name not specified
             if result_name is None:
                 result_name = f"{left_name}_{right_name}_joined"
                 

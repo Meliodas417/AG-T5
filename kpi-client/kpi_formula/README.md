@@ -126,9 +126,12 @@ avg_by_region = manager.compute(
 ### a) Basic Join
 ```python
 manager.join_datasets(
-    left_name='sales',
-    right_name='customers',
-    on='customer_id',
+left_name='sales',
+right_name='customers',
+    on='customer_id', # if column names are the same
+    # or
+    # left_on='sales_customer_id', # if column names are different
+    # right_on='customer_id',
     how='left',
     result_name='sales_with_customer'
 )
