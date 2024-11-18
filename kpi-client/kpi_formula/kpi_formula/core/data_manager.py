@@ -8,12 +8,10 @@ class DataManager:
     def __init__(self):
         self.dataframes = {}  # Store all dataframes
         self.db_engine = None
-        self.history = []     # 添加历史记录列表
-        self.current_data = None  # 添加当前数据属性
+        self.history = []     
+        self.current_data = None  
         
-    def connect_database(self, 
-                        connection_string: str,
-                        echo: bool = False) -> None:
+    def connect_database(self, connection_string: str, echo: bool = False) -> None:
         """
         Connect to a database
         

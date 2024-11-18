@@ -5,7 +5,7 @@ with open("README.md", "r", encoding="utf-8") as fh:
 
 setup(
     name="kpi-formula-t5",
-    version="0.2.1",
+    version="0.2.2",
     author="4485-t5",
     author_email="leoren1314@gmail.com",
     description="A KPI calculation tool",
@@ -32,9 +32,9 @@ setup(
         "pandas>=1.0.0",
         "numpy>=1.18.0",
         "openpyxl>=3.0.0",
-        "sqlalchemy>=1.4.0",     # 数据库支持
-        "pymysql>=1.0.0",        # MySQL支持
-        "psycopg2-binary>=2.9.0", # PostgreSQL支持
+        "sqlalchemy>=1.4.0",     
+        "pymysql>=1.0.0",        
+        "psycopg2-binary>=2.9.0", 
         "pyarrow>=5.0.0",
         "statistics",
         "flask>=2.0.0",
