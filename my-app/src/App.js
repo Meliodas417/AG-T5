@@ -30,6 +30,7 @@ function App() {
     const [firstTable, setFirstTable] = useState('');
     const [secondTable, setSecondTable] = useState('');
     const [selectedCommonColumn, setSelectedCommonColumn] = useState('');
+    const [chartData, setChartData] = useState({ labels: [], datasets: [] });
 
     const joinTypes = ['INNER JOIN', 'LEFT JOIN', 'RIGHT JOIN', 'FULL OUTER JOIN'];
 
@@ -191,15 +192,26 @@ function App() {
         setCommonColumns(columns);
     };
 
+    useEffect(() => {
+        setChartData(generateChartData());
+    }, [currentData, csvData]);
+
     const generateChartData = () => {
-        const data = dataSource === 'csv' ? csvData : dbData;
+        const data = dataSource === 'csv' ? csvData : currentData;
         if (!data || data.length === 0) {
             console.log('No data available for generating chart');
             return { labels: [], datasets: [] };
         }
 
+        console.log('Data for chart:', data);
+
         const labels = data.map((row) => row['Timestamp']);
         const dataValues = data.map((row) => row['Signal_Strength']);
+
+        if (labels.length === 0 || dataValues.length === 0) {
+            console.log('No valid labels or data values for chart');
+            return { labels: [], datasets: [] };
+        }
 
         return {
             labels: labels,
@@ -213,7 +225,6 @@ function App() {
             ],
         };
     };
-
 
     const chartOptions = {
         scales: {
@@ -455,7 +466,7 @@ function App() {
                         {renderTable()}
 
                         <div className="Line_chart">
-                            <Line data={generateChartData()} options={chartOptions} />
+                            <Line data={chartData} options={chartOptions} />
                         </div>
                     </div>
                 )}
