@@ -299,62 +299,8 @@ function App() {
         setTableNames([]); // Clear all table names
     };
 
-    const handleJoin = (commonColumn) => {
-        if (tableNames.length < 2) {
-            alert("You need at least two tables to perform a join operation.");
-            return;
-        }
-
-        try {
-            // Construct the join query using FULL OUTER JOIN
-            const joinQuery = tableNames.reduce((query, tableName, index) => {
-                const formattedTableName = `[${tableName}]`;
-                if (index === 0) {
-                    return `SELECT * FROM ${formattedTableName}`;
-                } else {
-                    return `${query} FULL OUTER JOIN ${formattedTableName} ON ${tableNames[0]}.${commonColumn} = ${tableName}.${commonColumn}`;
-                }
-            }, '');
-
-            console.log("Join Query:", joinQuery);
-
-            // Execute the join query
-            const result = alasql(joinQuery);
-
-            console.log(`Joined result: ${result.length} rows`);
-
-            // Use "Joined_Data" as the table name
-            const joinedTableName = "Joined_Data";
-            
-            // Create the AlaSQL table for joined data
-            alasql(`DROP TABLE IF EXISTS [${joinedTableName}]`);
-            alasql(`CREATE TABLE [${joinedTableName}]`);
-            alasql(`SELECT * INTO [${joinedTableName}] FROM ?`, [result]);
-
-            // Update columnNames with the new joined data structure
-            const newColumnNames = Object.keys(result[0]);
-            setColumnNames(newColumnNames);
-
-            // Update the current data with the joined result
-            setCurrentData(result);
-
-            // Set the current file name to Joined_Data
-            setFileName(joinedTableName);
-
-            // Set isJoinedData to true
-            setIsJoinedData(true);
-
-            // Notify that a new table has been created
-            handleTableCreated(joinedTableName);
-
-            // Set the current page to 1
-            setCurrentPage(1);
-
-            console.log(`Joined data processed as new table: ${joinedTableName}`);
-        } catch (error) {
-            console.error('Error performing join operation:', error);
-            alert(`Error performing join: ${error.message}`);
-        }
+    const handleJoinButtonClick = () => {
+        setIsJoinModalOpen(true);
     };
 
     const calculateCommonColumns = () => {
@@ -371,6 +317,45 @@ function App() {
     useEffect(() => {
         calculateCommonColumns();
     }, [firstTable, secondTable]);
+
+    const handleJoinSubmit = () => {
+        if (!firstTable || !secondTable || !selectedCommonColumn) {
+            alert("Please select two tables and a common column.");
+            return;
+        }
+
+        const joinedTableName = prompt("Enter a name for the joined table:");
+        if (!joinedTableName) {
+            alert("Table name cannot be empty.");
+            return;
+        }
+
+        try {
+            const joinQuery = `SELECT * FROM [${firstTable}] ${selectedJoinType} [${secondTable}] ON ${firstTable}.${selectedCommonColumn} = ${secondTable}.${selectedCommonColumn}`;
+            console.log("Join Query:", joinQuery);
+
+            const result = alasql(joinQuery);
+            console.log(`Joined result: ${result.length} rows`);
+
+            alasql(`DROP TABLE IF EXISTS [${joinedTableName}]`);
+            alasql(`CREATE TABLE [${joinedTableName}]`);
+            alasql(`SELECT * INTO [${joinedTableName}] FROM ?`, [result]);
+
+            setColumnNames(Object.keys(result[0]));
+            setCurrentData(result);
+            setFileName(joinedTableName);
+            setIsJoinedData(true);
+            handleTableCreated(joinedTableName);
+            setCurrentPage(1);
+
+            console.log(`Joined data processed as new table: ${joinedTableName}`);
+        } catch (error) {
+            console.error('Error performing join operation:', error);
+            alert(`Error performing join: ${error.message}`);
+        }
+
+        setIsJoinModalOpen(false);
+    };
 
     const handleDataSourceChange = (e) => {
         const newDataSource = e.target.value;
@@ -393,44 +378,6 @@ function App() {
         const selectedTableName = event.target.value;
         setSelectedTable(selectedTableName);
         console.log(`Selected table: ${selectedTableName}`); // Log the selected table
-    };
-
-    const handleJoinButtonClick = () => {
-        setIsJoinModalOpen(true);
-    };
-
-    const handleJoinSubmit = () => {
-        if (!firstTable || !secondTable || !selectedCommonColumn) {
-            alert("Please select two tables and a common column.");
-            return;
-        }
-
-        try {
-            const joinQuery = `SELECT * FROM [${firstTable}] ${selectedJoinType} [${secondTable}] ON ${firstTable}.${selectedCommonColumn} = ${secondTable}.${selectedCommonColumn}`;
-            console.log("Join Query:", joinQuery);
-
-            const result = alasql(joinQuery);
-            console.log(`Joined result: ${result.length} rows`);
-
-            const joinedTableName = "Joined_Data";
-            alasql(`DROP TABLE IF EXISTS [${joinedTableName}]`);
-            alasql(`CREATE TABLE [${joinedTableName}]`);
-            alasql(`SELECT * INTO [${joinedTableName}] FROM ?`, [result]);
-
-            setColumnNames(Object.keys(result[0]));
-            setCurrentData(result);
-            setFileName(joinedTableName);
-            setIsJoinedData(true);
-            handleTableCreated(joinedTableName);
-            setCurrentPage(1);
-
-            console.log(`Joined data processed as new table: ${joinedTableName}`);
-        } catch (error) {
-            console.error('Error performing join operation:', error);
-            alert(`Error performing join: ${error.message}`);
-        }
-
-        setIsJoinModalOpen(false);
     };
 
     return (
