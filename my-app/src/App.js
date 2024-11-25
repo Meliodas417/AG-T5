@@ -449,7 +449,7 @@ function App() {
                 ) : (
                     <div className="card">
                         <h2>Welcome to the KPI Uploader!</h2>
-                        <p>File uploaded: <strong>{fileName}</strong></p>
+                        <p>Current Table: <strong>{fileName}</strong></p>
 
                         {renderTable()}
 
