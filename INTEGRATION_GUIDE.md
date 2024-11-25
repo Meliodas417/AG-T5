@@ -3,103 +3,196 @@
 ## 1. Environment Setup
 Before integrating the KPI Uploader, ensure that the following environment setup steps have been completed:
 
-Node.js and npm must be installed. You can check if these are installed by running:
+### Essential Installations:
 
-```bash
-node -v
-npm -v
-```
-If they are not installed, download and install from [nodejs.org](https://nodejs.org/).
+1. Node.js and npm
+   
+   - Ensure Node.js and npm are installed by checking:
+     
+     ```
+     node -v
+     npm -v
+     ```
 
-React and the necessary libraries (e.g., Chart.js) must be installed. You can install them using npm:
+2. Python and FastAPI
 
-```bash
-npm install
-```
+   - Python is required for backend functionality using FastAPI. Verify the installation with:
+
+     ```
+     python --version
+     ```
+
+   - Install FastAPI and Uvicorn in the project environment:
+
+     ```
+     pip install fastapi uvicorn
+     ```
+
+ 3. React, TypeScript, and Vite
+
+    - Install the project dependencies (React, TypeScript, Vite) by running:
+
+      ```
+      npm create vite@latest
+      ```
+      
+ 4. Install ESLint with React Plugin
+
+    - To enable type-aware lint rules and ensure code quality:
+
+      ```
+      npm install eslint eslint-plugin-react --save-dev
+      ```
+
+ 5. Other Libraries
+
+    -  Dependencies like Chart.js, PapaParse, and AlaSQL for frontend and CSV parsing:
+
+       ```
+       npm install react-chartjs-2 chart.js papaparse alasql
+       ```
 
 ## 2. Install Required Dependencies
-Ensure that the following dependencies are installed:
 
-- `react-chartjs-2` for chart rendering
-- `chart.js` for chart creation
-- `papaparse` for csv parsing
+Ensure the following are installed to support data handling, rendering, and React-TypeScript configurations:
 
-If these libraries are not already installed in your project, install them by running:
+- Vite Plugins
 
-```bash
-npm install react-chartjs-2 chart.js papaparse
-```
+  - Install Babel or SWC plugin for Fast Refresh:
+
+    ```
+    npm install @vitejs/plugin-react
+    ```
+
+  - Configure ESLint and TypeScript for production-level linting:
+
+    - Configure `eslint.config.js` as follows:
+
+      ```javascript
+      import react from 'eslint-plugin-react'
+
+      export default tseslint.config({
+        settings: { react: { version: '18.3' } },
+        plugins: { react },
+        rules: {
+          ...react.configs.recommended.rules,
+          ...react.configs['jsx-runtime'].rules,
+        },
+      })
+      ```
 
 ## 3. Project Structure
-Here is the project structure for the KPI Uploader integration:
 
-```bash
-/my-app
+The project structure for the KPI Uploader integration is as follows:
+
+```
+/kpi-client
 │
-├── /src
-│   ├── App.js               # Main application file
-│   ├── kpi-formula-parser.js # CSV file parsing and expression handling
-│   ├── index.js             # Entry point for React
-│   ├── KPIUploader.css      # Stylesheet for KPI uploader component
-│   └── /assets              # Optional folder for any static assets like logos
+├── /public                    # Public assets for the application
+│   └── index.html             # Main HTML file
 │
-├── /public
-│   └── index.html           # Main HTML file
+├── /src                       # Source files for the application
+│   ├── App.tsx                # Main application file
+│   ├── main.tsx               # Entry point for React with strict mode enabled
+│   ├── index.css              # Main CSS file with Tailwind setup
+│   ├── output.css             # Generated CSS output (optional if used)
+│   ├── vite-env.d.ts          # TypeScript environment declarations for Vite
+│   ├── types.ts               # Type definitions for application data structures
+│   └── /components            # Component folder for reusable UI components
+│       ├── Layout.tsx         # Main layout component
+│       ├── Sidebar.tsx        # Sidebar for navigation and actions
+│       ├── DataTable.tsx      # Data table for displaying CSV or database data
+│       ├── ImportModal.tsx    # Modal for importing CSV/database data
+│       ├── ExportModal.tsx    # Modal for exporting data to CSV/database
+│       ├── ExpressionModal.tsx# Modal for applying expressions
+│       └── JoinModal.tsx      # Modal for joining tables
 │
-├── package.json             # Project dependencies and scripts
-├── package-lock.json        # Lock file for npm dependencies
-└── README.md                # Project documentation
+├── .gitignore                 # Git ignore file
+├── README.md                  # Project documentation
+├── eslint.config.js           # ESLint configuration file for linting
+├── package.json               # Project dependencies and scripts
+├── package-lock.json          # Lock file for npm dependencies
+├── tailwind.config.js         # Tailwind CSS configuration file
+├── tsconfig.app.json          # TypeScript configuration for the application
+├── tsconfig.json              # Base TypeScript configuration
+├── tsconfig.node.json         # TypeScript configuration for node-related files
+└── vite.config.ts             # Vite configuration file
 ```
 
 ## 4. Running the Application
-To run the KPI Uploader in your local environment, execute the following commands:
 
-```bash
-npm start
-```
+### Start Backend (FastAPI)
 
-## 5. File Upload and Chart Visualization
-The `App.js` component handles file uploading, CSV parsing, table rendering, and chart visualization.
+1. Start the FastAPI server to handle backend data operations:
 
-Once a CSV file is uploaded, the data is parsed using PapaParse, and the table and charts (Line chart and Doughnut chart) are displayed.
+   ```
+   uvicorn src.main:app --reload --port 8001
+   ```
 
-Make sure your CSV file contains the following required columns for full functionality:
-- `Timestamp`
-- `Signal_Strength`
-- `Application_Type`
-- `Resource_Allocation`
+### Start Frontend (React + Vite)
+
+2. In a separate terminal, start the React frontend:
+
+   ```
+   npm run dev
+   ```
+
+## 5. Functionalities
+
+### Import, Export, Join, and Expression Handling
+
+- Data Import
   
-You can modify or extend these columns as needed in your CSV files.
+  Supports CSV import and database connections. Configure import modal and `handleImport` function for CSV and database handling.
 
-## 6. Pagination for CSV Table
-The application automatically paginates the CSV data, displaying 10 rows per page. You can adjust the number of rows per page by modifying the `rowsPerPage` constant in `App.js`.
+- Data Export
 
-## 7. Adding Expressions
-The `kpi-formula-parser.js` file provides functionality for users to generate new columns by entering expressions based on the existing columns in the CSV data.
+  Supports exporting current data view to CSV or connecting with databases.
 
-Users can input mathematical expressions (e.g., `column1 + column2`) to calculate new values and add them as new columns to the dataset.
+- Join Operations
 
-New columns can be deleted using the delete button next to each added column.
+  Left, right, inner, and full joins between datasets, implemented in `JoinModal`.
 
-## 8. Customization
-If you need to customize the chart appearance or behavior, modify the `generateChartData` and `generatePieChartData` functions in `App.js`. You can also adjust chart options like axis labels in the `chartOptions` object.
+- Expressions and Calculations
 
-For additional styling, you can modify the `KPIUploader.css` file. You might want to:
-- Adjust the layout of charts.
-- Customize table styles.
-- Modify the pagination buttons.
+  Allows users to apply calculations between columns, e.g., addition, multiplication, etc., in `ExpressionModal`.
 
-## 9. Development
-When you are ready to deploy the application, run:
 
-```bash
+## 6. Chart Visualization
+
+- The application supports data visualization using Line and Doughnut charts.
+
+- Chart customization can be done in `DataTable` component for additional chart types or data manipulations.
+
+
+## 7. CSS and Styling
+
+- Tailwind CSS is used for styling. Update styles directly in `index.css` or add custom components.
+
+
+## 8. KPI Library Integration
+
+To use the KPI Library created by Team 5, follow these steps:
+
+- Download and install the `kpi-formula-t5 library`, which Team 5 has published on the Python community platform. Ensure it is installed by running:
+
+  ```
+  pip install kpi-formula-t5
+  ```
+
+This library provides essential KPI calculation functions that other teams can integrate for consistent data handling.
+
+
+## 9. Deployment
+
+When ready for production:
+
+```
 npm run build
 ```
 
-This will create an optimized build of the app in the `/build` directory, which can then be deployed to any static site host (e.g., Netlify, Vercel, GitHub Pages).
+This generates a production-ready build in the `/dist` directory.
 
 
-## 10. Further Steps
-If you need to extend the functionality:
-- Adding New Charts: You can add more chart types by following the example of the Line and Doughnut charts in `App.js`. The `react-chartjs-2` library supports various types like Bar, Pie, and Radar charts.
-- Advanced CSV Features: If your use case requires advanced data manipulation, consider implementing more complex formula parsing or additional features like filtering and sorting.
+
+
