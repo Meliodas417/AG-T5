@@ -23,6 +23,8 @@ function KPIUploader({
     const [addedColumns, setAddedColumns] = useState([]);
     const [savedColumns, setSavedColumns] = useState([]);
     const [fileUploaded, setFileUploaded] = useState(false);
+    const [isColumnModalOpen, setIsColumnModalOpen] = useState(false);
+    const [selectedColumn, setSelectedColumn] = useState('');
 
     useEffect(() => {
         if (currentData && currentData.length > 0 && columnNames && columnNames.length > 0) {
@@ -306,6 +308,23 @@ function KPIUploader({
         }
     };
 
+    // Function to handle opening the modal
+    const handleColumnButtonClick = (column) => {
+        setSelectedColumn(column);
+        setIsColumnModalOpen(true);
+    };
+
+    // Function to handle saving/unsaving the column
+    const handleSaveToggle = () => {
+        handleToggleSaveColumn(selectedColumn);
+        setIsColumnModalOpen(false);
+    };
+
+    // Function to handle opening the modal
+    const handleManageColumnsClick = () => {
+        setIsColumnModalOpen(true);
+    };
+
     return (
         <div>
             {dataSource === 'csv' && (
@@ -349,23 +368,8 @@ function KPIUploader({
                         <button onClick={handleExpression}>Generate New Column</button>
                     </div>
 
-                    <div className="added-columns">
-                        <h3>Added Columns:</h3>
-                        {addedColumns.length > 0 ? (
-                            <ul>
-                                {addedColumns.map((column) => (
-                                    <li key={column}>
-                                        {column}
-                                        <button onClick={() => handleDeleteColumn(column)}>Delete</button>
-                                        <button onClick={() => handleToggleSaveColumn(column)}>
-                                            {savedColumns.includes(column) ? 'Saved' : 'Save'}
-                                        </button>
-                                    </li>
-                                ))}
-                            </ul>
-                        ) : (
-                            <p>No columns added yet.</p>
-                        )}
+                    <div>
+                        <button onClick={handleManageColumnsClick}>Manage Added Columns</button>
                     </div>
 
                     <div>
@@ -373,6 +377,30 @@ function KPIUploader({
                         <button onClick={handleImport}>Export to Database</button>
                     </div>
                 </>
+            )}
+
+            {isColumnModalOpen && (
+                <div className="modal">
+                    <div className="modal-content">
+                        <span className="close" onClick={() => setIsColumnModalOpen(false)}>&times;</span>
+                        <h3>Manage Added Columns</h3>
+                        {addedColumns.length > 0 ? (
+                            <ul>
+                                {addedColumns.map((column) => (
+                                    <li key={column}>
+                                        <span>{column}</span>
+                                        <button onClick={() => handleToggleSaveColumn(column)}>
+                                            {savedColumns.includes(column) ? 'Unsave' : 'Save'}
+                                        </button>
+                                        <button onClick={() => handleDeleteColumn(column)}>Delete</button>
+                                    </li>
+                                ))}
+                            </ul>
+                        ) : (
+                            <p>No columns added yet.</p>
+                        )}
+                    </div>
+                </div>
             )}
         </div>
     );
