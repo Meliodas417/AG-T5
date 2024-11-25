@@ -408,7 +408,7 @@ function App() {
                         onTableCreated={handleTableCreated}
                         onCommonColumnsChange={handleCommonColumnsChange}
                         currentData={currentData}
-                        setCurrentData={setCurrentData}  // Make sure this line is present
+                        setCurrentData={setCurrentData}
                         columnNames={columnNames}
                         setColumnNames={setColumnNames}
                         fileName={fileName}
@@ -417,6 +417,7 @@ function App() {
                         setIsJoinedData={setIsJoinedData}
                         setCurrentPage={setCurrentPage}
                         setIsDataLoaded={setIsDataLoaded}
+                        setIsJoinModalOpen={setIsJoinModalOpen}
                     />
                 )}
 
@@ -452,8 +453,6 @@ function App() {
                         <p>Current Table: <strong>{fileName}</strong></p>
 
                         {renderTable()}
-
-                        <button onClick={handleJoinButtonClick}>Open Join Table Form</button>
 
                         <div className="Line_chart">
                             <Line data={generateChartData()} options={chartOptions} />

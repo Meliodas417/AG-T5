@@ -16,7 +16,8 @@ function KPIUploader({
     dataSource, 
     setIsJoinedData,
     setCurrentPage,
-    setIsDataLoaded
+    setIsDataLoaded,
+    setIsJoinModalOpen
 }) {
     const [csvData, setCsvData] = useState([]);
     const [expression, setExpression] = useState('');
@@ -371,7 +372,9 @@ function KPIUploader({
                     <div>
                         <button onClick={handleManageColumnsClick}>Manage Added Columns</button>
                     </div>
-
+                    <div>
+                    <button onClick={() => setIsJoinModalOpen(true)}>Open Join Table Form</button>
+                    </div>
                     <div>
                         <button onClick={handleExport}>Export CSV</button>
                         <button onClick={handleImport}>Export to Database</button>
