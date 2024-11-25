@@ -335,15 +335,6 @@ function KPIUploader({
 
             {fileUploaded && (
                 <>
-                    <div className="column-selection">
-                        <h3>Available Columns:</h3>
-                        {columnNames.map((column) => (
-                            <div key={column} className="column-item">
-                                <label>{column}</label>
-                            </div>
-                        ))}
-                    </div>
-
                     <div>
                         <h3>Enter Expression:</h3>
                         <textarea
