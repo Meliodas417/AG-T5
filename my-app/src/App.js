@@ -25,6 +25,13 @@ function App() {
     const [isDataLoaded, setIsDataLoaded] = useState(false);
     const [availableTables, setAvailableTables] = useState([]);
     const [selectedTable, setSelectedTable] = useState('');
+    const [isJoinModalOpen, setIsJoinModalOpen] = useState(false);
+    const [selectedJoinType, setSelectedJoinType] = useState('INNER JOIN');
+    const [firstTable, setFirstTable] = useState('');
+    const [secondTable, setSecondTable] = useState('');
+    const [selectedCommonColumn, setSelectedCommonColumn] = useState('');
+
+    const joinTypes = ['INNER JOIN', 'LEFT JOIN', 'RIGHT JOIN', 'FULL OUTER JOIN'];
 
     // Function to handle when a new table is created
     const handleTableCreated = (tableName) => {
@@ -351,29 +358,19 @@ function App() {
     };
 
     const calculateCommonColumns = () => {
-        const allTables = Object.keys(alasql.tables);
-        if (allTables.length > 1) {
-            let common = null;
+        if (!firstTable || !secondTable) return;
 
-            allTables.forEach((tableName, index) => {
-                const tableColumns = alasql(`SHOW COLUMNS FROM [${tableName}]`).map(col => col.columnid);
-                console.log(`Columns in ${tableName}:`, tableColumns);
+        const firstTableColumns = alasql(`SHOW COLUMNS FROM [${firstTable}]`).map(col => col.columnid);
+        const secondTableColumns = alasql(`SHOW COLUMNS FROM [${secondTable}]`).map(col => col.columnid);
 
-                if (index === 0) {
-                    common = new Set(tableColumns);
-                } else {
-                    common = new Set([...common].filter(x => tableColumns.includes(x)));
-                }
-            });
-
-            const commonArray = Array.from(common);
-            console.log('Common Columns across all tables:', commonArray);
-            setCommonColumns(commonArray);
-        } else {
-            console.log('Not enough tables to find common columns.');
-            setCommonColumns([]);
-        }
+        const common = firstTableColumns.filter(col => secondTableColumns.includes(col));
+        setCommonColumns(common);
+        setSelectedCommonColumn(common[0] || ''); // Default to the first common column
     };
+
+    useEffect(() => {
+        calculateCommonColumns();
+    }, [firstTable, secondTable]);
 
     const handleDataSourceChange = (e) => {
         const newDataSource = e.target.value;
@@ -396,6 +393,44 @@ function App() {
         const selectedTableName = event.target.value;
         setSelectedTable(selectedTableName);
         console.log(`Selected table: ${selectedTableName}`); // Log the selected table
+    };
+
+    const handleJoinButtonClick = () => {
+        setIsJoinModalOpen(true);
+    };
+
+    const handleJoinSubmit = () => {
+        if (!firstTable || !secondTable || !selectedCommonColumn) {
+            alert("Please select two tables and a common column.");
+            return;
+        }
+
+        try {
+            const joinQuery = `SELECT * FROM [${firstTable}] ${selectedJoinType} [${secondTable}] ON ${firstTable}.${selectedCommonColumn} = ${secondTable}.${selectedCommonColumn}`;
+            console.log("Join Query:", joinQuery);
+
+            const result = alasql(joinQuery);
+            console.log(`Joined result: ${result.length} rows`);
+
+            const joinedTableName = "Joined_Data";
+            alasql(`DROP TABLE IF EXISTS [${joinedTableName}]`);
+            alasql(`CREATE TABLE [${joinedTableName}]`);
+            alasql(`SELECT * INTO [${joinedTableName}] FROM ?`, [result]);
+
+            setColumnNames(Object.keys(result[0]));
+            setCurrentData(result);
+            setFileName(joinedTableName);
+            setIsJoinedData(true);
+            handleTableCreated(joinedTableName);
+            setCurrentPage(1);
+
+            console.log(`Joined data processed as new table: ${joinedTableName}`);
+        } catch (error) {
+            console.error('Error performing join operation:', error);
+            alert(`Error performing join: ${error.message}`);
+        }
+
+        setIsJoinModalOpen(false);
     };
 
     return (
@@ -471,26 +506,7 @@ function App() {
 
                         {renderTable()}
 
-                        <div>
-                            <h3>Common Columns across all tables:</h3>
-                            {commonColumns.length > 0 ? (
-                                <ul>
-                                    {commonColumns.map((column) => (
-                                        <li key={column}>
-                                            {column}
-                                            <button 
-                                                onClick={() => handleJoin(column)}
-                                                style={{marginLeft: '10px'}}
-                                            >
-                                                Join on {column}
-                                            </button>
-                                        </li>
-                                    ))}
-                                </ul>
-                            ) : (
-                                <p>No common columns found.</p>
-                            )}
-                        </div>
+                        <button onClick={handleJoinButtonClick}>Open Join Table Form</button>
 
                         <div className="Line_chart">
                             <Line data={generateChartData()} options={chartOptions} />
@@ -498,6 +514,52 @@ function App() {
                     </div>
                 )}
             </div>
+
+            {isJoinModalOpen && (
+                <div className="modal">
+                    <div className="modal-content">
+                        <span className="close" onClick={() => setIsJoinModalOpen(false)}>&times;</span>
+                        <h3>Select Tables and Join Type</h3>
+                        <div>
+                            <label>First Table:</label>
+                            <select value={firstTable} onChange={(e) => setFirstTable(e.target.value)}>
+                                <option value="">Select a table</option>
+                                {tableNames.map((table) => (
+                                    <option key={table} value={table}>{table}</option>
+                                ))}
+                            </select>
+                        </div>
+                        <div>
+                            <label>Second Table:</label>
+                            <select value={secondTable} onChange={(e) => setSecondTable(e.target.value)}>
+                                <option value="">Select a table</option>
+                                {tableNames.map((table) => (
+                                    <option key={table} value={table}>{table}</option>
+                                ))}
+                            </select>
+                        </div>
+                        <div>
+                            <label>Common Column:</label>
+                            <select value={selectedCommonColumn} onChange={(e) => setSelectedCommonColumn(e.target.value)}>
+                                <option value="">Select a common column</option>
+                                {commonColumns.map((column) => (
+                                    <option key={column} value={column}>{column}</option>
+                                ))}
+                            </select>
+                        </div>
+                        <div>
+                            <label>Join Type:</label>
+                            <select value={selectedJoinType} onChange={(e) => setSelectedJoinType(e.target.value)}>
+                                {joinTypes.map((type) => (
+                                    <option key={type} value={type}>{type}</option>
+                                ))}
+                            </select>
+                        </div>
+                        <button onClick={handleJoinSubmit}>Submit</button>
+                        <button onClick={() => setIsJoinModalOpen(false)}>Cancel</button>
+                    </div>
+                </div>
+            )}
         </div>
     );
 }

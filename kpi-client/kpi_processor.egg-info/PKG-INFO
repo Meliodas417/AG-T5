@@ -1,0 +1,6 @@
+Metadata-Version: 2.1
+Name: kpi-processor
+Version: 0.1.0
+Summary: KPI Processing Module for Data Analysis
+Author: Your Name
+Requires-Dist: pandas>=1.0.0

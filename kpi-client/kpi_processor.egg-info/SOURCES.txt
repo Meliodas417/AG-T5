@@ -1,0 +1,10 @@
+README.md
+setup.py
+kpi_processor/__init__.py
+kpi_processor/kpi_operations.py
+kpi_processor/test.py
+kpi_processor.egg-info/PKG-INFO
+kpi_processor.egg-info/SOURCES.txt
+kpi_processor.egg-info/dependency_links.txt
+kpi_processor.egg-info/requires.txt
+kpi_processor.egg-info/top_level.txt
