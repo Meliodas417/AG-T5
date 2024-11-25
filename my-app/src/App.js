@@ -193,17 +193,20 @@ function App() {
     };
 
     useEffect(() => {
+        console.log('Current Data:', currentData);
+        console.log('CSV Data:', csvData);
         setChartData(generateChartData());
     }, [currentData, csvData]);
 
     const generateChartData = () => {
         const data = dataSource === 'csv' ? csvData : currentData;
+        console.log('Data source for chart:', dataSource);
+        console.log('Data used for chart generation:', data);
+
         if (!data || data.length === 0) {
             console.log('No data available for generating chart');
             return { labels: [], datasets: [] };
         }
-
-        console.log('Data for chart:', data);
 
         const labels = data.map((row) => row['Timestamp']);
         const dataValues = data.map((row) => row['Signal_Strength']);
@@ -213,7 +216,7 @@ function App() {
             return { labels: [], datasets: [] };
         }
 
-        return {
+        const chartData = {
             labels: labels,
             datasets: [
                 {
@@ -224,6 +227,9 @@ function App() {
                 },
             ],
         };
+
+        console.log('Generated chart data:', chartData);
+        return chartData;
     };
 
     const chartOptions = {
@@ -429,6 +435,9 @@ function App() {
                         setCurrentPage={setCurrentPage}
                         setIsDataLoaded={setIsDataLoaded}
                         setIsJoinModalOpen={setIsJoinModalOpen}
+                        setChartData={setChartData}
+                        csvData={csvData}
+                        setCsvData={setCsvData}
                     />
                 )}
 

@@ -8,7 +8,7 @@ function KPIUploader({
     onTableCreated, 
     onCommonColumnsChange, 
     currentData, 
-    setCurrentData,  // Make sure this is included
+    setCurrentData, 
     columnNames, 
     setColumnNames, 
     fileName, 
@@ -17,9 +17,11 @@ function KPIUploader({
     setIsJoinedData,
     setCurrentPage,
     setIsDataLoaded,
-    setIsJoinModalOpen
+    setIsJoinModalOpen,
+    setChartData, 
+    setCsvData,
+    csvData,
 }) {
-    const [csvData, setCsvData] = useState([]);
     const [expression, setExpression] = useState('');
     const [addedColumns, setAddedColumns] = useState([]);
     const [savedColumns, setSavedColumns] = useState([]);
@@ -79,11 +81,46 @@ function KPIUploader({
         calculateCommonColumns();
     };
 
+    const generateChartData = (data) => {
+        if (!data || data.length === 0) {
+            console.log('No data available for generating chart');
+            return { labels: [], datasets: [] };
+        }
+
+        console.log('Data for chart:', data);
+
+        const labels = data.map((row) => row['Timestamp']);
+        const dataValues = data.map((row) => row['Signal_Strength']);
+
+        if (labels.length === 0 || dataValues.length === 0) {
+            console.log('No valid labels or data values for chart');
+            return { labels: [], datasets: [] };
+        }
+
+        const chartData = {
+            labels: labels,
+            datasets: [
+                {
+                    label: 'Signal Strength Over Time',
+                    data: dataValues,
+                    borderColor: '#99CC33',
+                    backgroundColor: '#99CC33',
+                },
+            ],
+        };
+
+        console.log('Generated chart data:', chartData);
+        return chartData;
+    };
+
     const handleFileUpload = (uploadedFileName, data, columns = null) => {
         if (!data || data.length === 0) {
             console.error('No data to upload');
             return;
         }
+
+        console.log('Uploading file:', uploadedFileName);
+        console.log('Data:', data);
 
         setFileUploaded(true);
         setFileName(uploadedFileName);
@@ -94,16 +131,16 @@ function KPIUploader({
         setCurrentPage(1);
         setIsDataLoaded(true);
 
-        // Use the uploadedFileName as is for "Joined_Data", otherwise sanitize
         const tableName = uploadedFileName === "Joined_Data" 
             ? uploadedFileName 
             : uploadedFileName.replace(/\.[^/.]+$/, "").replace(/[^a-zA-Z0-9_]/g, "_");
 
-        // Create or update the AlaSQL table
         createAlaSQLTable(tableName, data);
-
-        // Notify that a new table has been created
         onTableCreated(tableName);
+
+        const newChartData = generateChartData(data);
+        console.log('Setting chart data:', newChartData);
+        setChartData(newChartData);
     };
 
     const handleExpression = () => {
