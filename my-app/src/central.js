@@ -1,10 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import './KPIUploader.css';
-import KPIUploader from './kpi-formula-parser';
-import { Line, Doughnut } from 'react-chartjs-2';
+import KPIUploader from './sidebar';
+import { Line } from 'react-chartjs-2';
 import { Chart, CategoryScale, LinearScale, PointElement, LineElement, Title, Tooltip, Legend, ArcElement } from 'chart.js';
 import alasql from 'alasql';
-import { Table } from '../node_modules/@mui/material/index';
 
 Chart.register(CategoryScale, LinearScale, PointElement, LineElement, Title, Tooltip, Legend, ArcElement);
 
