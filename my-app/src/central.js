@@ -221,8 +221,8 @@ function App() {
                 {
                     label: 'Signal Strength Over Time',
                     data: dataValues,
-                    borderColor: '#99CC33',
-                    backgroundColor: '#99CC33',
+                    borderColor: '#A2C4CB',
+                    backgroundColor: '#A2C4CB',
                 },
             ],
         };
